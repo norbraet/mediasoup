@@ -5,7 +5,6 @@ const envSchema = z.object({
   ENVIRONMENT: z
     .union([
       z.literal("development"),
-      z.literal("testing"),
       z.literal("production"),
     ])
     .default("development"),
