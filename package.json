@@ -5,7 +5,8 @@
   "scripts": {
     "dev:client": "npm --workspace=@mediasoup/client run dev",
     "dev:server": "npm --workspace=@mediasoup/server run dev",
-    "build": "npm -ws run build"
+    "build": "npm -ws run build",
+    "clean": "npm -ws run clean"
   },
   "repository": {
     "type": "git",
