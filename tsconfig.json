@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/client" },
+    { "path": "./apps/server" },
+    { "path": "./packages/types" },
+  ],
+  "compilerOptions": {
+    "composite": false,
+    "skipLibCheck": true,
+    "strict": true
+  }
+}

@@ -1,0 +1,53 @@
+# -------------------
+# Node dependencies
+# -------------------
+node_modules/
+**/node_modules/
+
+# -------------------
+# Build outputs
+# -------------------
+dist/
+**/dist/
+build/
+**/build/
+
+# -------------------
+# Logs
+# -------------------
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# -------------------
+# Environment variables
+# -------------------
+.env
+**/.env
+
+# -------------------
+# IDE / Editor
+# -------------------
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# -------------------
+# OS generated
+# -------------------
+.DS_Store
+Thumbs.db
+
+# -------------------
+# Optional: TypeScript
+# -------------------
+*.tsbuildinfo
+
+# -------------------
+# Optional: Frontend / Vite
+# -------------------
+*.local
+.vite
