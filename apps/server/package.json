@@ -1,0 +1,16 @@
+{
+  "name": "@mediasoup/server",
+  "version": "1.0.0",
+  "description": "Backend Mediasoup server that handles WebRTC transport, rooms, and signaling.",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "echo \"No tests configured\""
+  },
+  "keywords": [],
+  "author": "Norbert Balaz",
+  "license": "MIT",
+  "type": "module"
+}

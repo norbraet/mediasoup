@@ -1,0 +1,15 @@
+{
+  "name": "@mediasoup/types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for the Mediasoup client and server (signaling messages, state, etc.).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "echo \"No tests configured\""
+  },
+  "keywords": [],
+  "author": "Norbert Balaz",
+  "license": "MIT",
+  "type": "module"
+}
