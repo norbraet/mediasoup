@@ -12,7 +12,6 @@
     "type": "git",
     "url": "git+https://github.com/norbraet/mediasoup.git"
   },
-  "keywords": [],
   "author": "Norbert Balaz",
   "license": "MIT",
   "type": "module",
