@@ -10,7 +10,6 @@
     "test": "echo \"No tests configured\""
   },
   "author": "Norbert Balaz",
-  "keywords": [],
   "license": "MIT",
   "type": "module"
 }

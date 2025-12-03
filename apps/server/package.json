@@ -9,7 +9,6 @@
     "start": "node dist/index.js",
     "test": "echo \"No tests configured\""
   },
-  "keywords": [],
   "author": "Norbert Balaz",
   "license": "MIT",
   "type": "module"
