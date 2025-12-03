@@ -2,7 +2,6 @@
   "name": "mediasoup",
   "version": "1.0.0",
   "description": "A university assignment built with mediasoup, Express.js, and Vue. This project demonstrates a multi-user room with camera and screen sharing, voice chat, file sharing, and text chat. Prototype only—created for learning purposes, not production-ready.",
-  "main": "index.js",
   "scripts": {
     "dev:client": "npm --workspace=@mediasoup/client run dev",
     "dev:server": "npm --workspace=@mediasoup/server run dev",
