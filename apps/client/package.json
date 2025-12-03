@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Client-side application that connects to the Mediasoup backend via WebRTC.",
   "main": "dist/main.js",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
