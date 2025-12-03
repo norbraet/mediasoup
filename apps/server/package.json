@@ -11,5 +11,8 @@
   },
   "author": "Norbert Balaz",
   "license": "MIT",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.1.13"
+  }
 }
