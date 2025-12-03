@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  PORT: z.coerce.number().min(1000),
+  EXPRESS_PORT: z.coerce.number().min(1000),
   ENVIRONMENT: z
     .union([
       z.literal("development"),
