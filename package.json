@@ -14,7 +14,7 @@
   },
   "keywords": [],
   "author": "Norbert Balaz",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/norbraet/mediasoup/issues"
