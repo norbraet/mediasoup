@@ -2,7 +2,7 @@
   "name": "@mediasoup/client",
   "version": "1.0.0",
   "description": "Client-side application that connects to the Mediasoup backend via WebRTC.",
-  "main": "dist/index.js",
+  "main": "dist/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
