@@ -1,4 +1,5 @@
-console.log("Vue client starting ...")
+import { createApp } from 'vue'
+import './style.css'
+import App from './App.vue'
 
-// TODO: Add Vue App
-export {}
+createApp(App).mount('#app')
