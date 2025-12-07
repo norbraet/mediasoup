@@ -1,4 +1,7 @@
+import dotenv from "dotenv";
 import { z } from "zod";
+
+dotenv.config()
 
 const envSchema = z.object({
   EXPRESS_PORT: z.coerce.number().min(1000),
