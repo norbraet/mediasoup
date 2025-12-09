@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { createServer } from 'https'
 import { createApp } from './express/app'
+import { initMediasoup } from './mediasoup/createMediasoup'
 import env from './config/env'
 import { Server as SocketIOServer } from 'socket.io'
 
@@ -24,6 +25,8 @@ async function main(): Promise<void> {
   })
 
   console.log('Server is running on port:', env.EXPRESS_PORT)
+
+  initMediasoup()
 }
 
 try {
