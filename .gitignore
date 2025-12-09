@@ -56,3 +56,17 @@ Thumbs.db
 # ESLint & Prettier
 # -------------------
 .eslintcache
+
+# -------------------
+# Security / Certificates
+# -------------------
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
