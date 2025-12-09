@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint . --ext .ts,.vue,.js,.mjs",
+    "lint:fix": "eslint . --ext .ts,.vue,.js,.mjs --fix"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
