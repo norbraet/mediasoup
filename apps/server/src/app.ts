@@ -1,19 +1,17 @@
-import express from "express"
+import express from 'express'
 import cors from 'cors'
 
 export function createApp() {
-    const app = express()
+  const app = express()
 
-    app.use(cors())
-    app.use(express.json())
+  app.use(cors())
+  app.use(express.json())
 
-    app.get("/health", (req, res) => {
-        res.json(
-            {
-                status: "ok"
-            }
-        )
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'ok',
     })
+  })
 
-    return app
+  return app
 }

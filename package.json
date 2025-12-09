@@ -6,7 +6,16 @@
     "dev": "concurrently --names \"🖥️  SERVER,🌐 CLIENT\" --prefix-colors \"blue.bold,green.bold\" --kill-others-on-fail \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "npm --workspace=@mediasoup/client run dev",
     "dev:server": "npm --workspace=@mediasoup/server run dev",
-    "build": "npm -ws run build"
+    "build": "npm -ws run build",
+    "lint": "eslint . --ext .ts,.vue,.js,.mjs",
+    "lint:fix": "eslint . --ext .ts,.vue,.js,.mjs --fix",
+    "lint:staged": "eslint --ext .ts,.vue,.js,.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "format:check:staged": "prettier --check",
+    "typecheck": "npm -ws run typecheck",
+    "hooks:install": "lefthook install",
+    "hooks:uninstall": "lefthook uninstall"
   },
   "repository": {
     "type": "git",
@@ -28,9 +37,19 @@
     "node": ">=24.11"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
     "concurrently": "^9.2.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-vue": "^10.6.2",
+    "lefthook": "^2.0.9",
+    "prettier": "^3.7.4",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vue-eslint-parser": "^10.2.0"
   }
 }
