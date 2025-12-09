@@ -9,8 +9,8 @@ async function main(): Promise<void> {
   const app = createApp()
 
   // Keys were made with mkcert
-  const key = fs.readFileSync('./config/create-cert-key.pem')
-  const cert = fs.readFileSync('./config/create-cert.pem')
+  const key = fs.readFileSync('./create-cert-key.pem')
+  const cert = fs.readFileSync('./create-cert.pem')
   const options = {
     key: key,
     cert: cert,
