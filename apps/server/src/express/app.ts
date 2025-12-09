@@ -1,6 +1,6 @@
 import express, { type Express } from 'express'
 import cors from 'cors'
-import env from './config/env'
+import env from '../config/env'
 
 export function createApp(): Express {
   const app = express()
