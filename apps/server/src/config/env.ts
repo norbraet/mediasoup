@@ -1,18 +1,13 @@
-import dotenv from "dotenv";
-import { z } from "zod";
+import dotenv from 'dotenv'
+import { z } from 'zod'
 
 dotenv.config()
 
 const envSchema = z.object({
   EXPRESS_PORT: z.coerce.number().min(1000),
-  ENVIRONMENT: z
-    .union([
-      z.literal("development"),
-      z.literal("production"),
-    ])
-    .default("development"),
-  CORS_ORIGIN: z.coerce.string()
-});
+  ENVIRONMENT: z.union([z.literal('development'), z.literal('production')]).default('development'),
+  CORS_ORIGIN: z.coerce.string(),
+})
 
 const env = envSchema.parse(process.env)
 
