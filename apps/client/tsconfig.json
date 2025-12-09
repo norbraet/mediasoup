@@ -1,8 +1,5 @@
 {
-  "extends": [
-    "@vue/tsconfig/tsconfig.dom.json",
-    "../../tsconfig.json"
-  ],
+  "extends": ["@vue/tsconfig/tsconfig.dom.json", "../../tsconfig.json"],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "composite": true,
@@ -10,16 +7,11 @@
     "rootDir": "src",
     "module": "ESNext",
     "target": "ES2023",
-    "lib": [
-      "ES2023"
-    ],
+    "lib": ["ES2023"],
     "skipLibCheck": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "types": [
-      "node",
-      "vite/client"
-    ],
+    "types": ["node", "vite/client"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -32,14 +24,8 @@
     "moduleDetection": "force",
     "noEmit": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.vue",
-    "src/**/*.d.ts"
-  ],
-  "exclude": [
-    "dist"
-  ],
+  "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.d.ts"],
+  "exclude": ["dist"],
   "references": [
     {
       "path": "../../packages/types"
