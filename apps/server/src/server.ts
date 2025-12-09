@@ -1,6 +1,6 @@
 import fs from 'fs'
 import { createServer } from 'https'
-import { createApp } from './app'
+import { createApp } from './express/app'
 import env from './config/env'
 import { Server as SocketIOServer } from 'socket.io'
 
