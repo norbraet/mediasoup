@@ -9,9 +9,13 @@
     "build": "npm -ws run build",
     "lint": "eslint . --ext .ts,.vue,.js,.mjs",
     "lint:fix": "eslint . --ext .ts,.vue,.js,.mjs --fix",
+    "lint:staged": "eslint --ext .ts,.vue,.js,.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "npm -ws run typecheck"
+    "format:check:staged": "prettier --check",
+    "typecheck": "npm -ws run typecheck",
+    "hooks:install": "lefthook install",
+    "hooks:uninstall": "lefthook uninstall"
   },
   "repository": {
     "type": "git",
@@ -42,18 +46,10 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-vue": "^10.6.2",
+    "lefthook": "^2.0.9",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vue-eslint-parser": "^10.2.0"
-  },
-  "lint-staged": {
-    "*.{js,mjs,ts,vue}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
   }
 }
