@@ -1,10 +1,16 @@
-import express from 'express'
+import express, { type Express } from 'express'
 import cors from 'cors'
+import env from './config/env'
 
-export function createApp() {
+export function createApp(): Express {
   const app = express()
 
-  app.use(cors())
+  app.use(
+    cors({
+      origin: env.CORS_ORIGIN,
+      credentials: true,
+    })
+  )
   app.use(express.json())
 
   app.get('/health', (req, res) => {
