@@ -6,7 +6,10 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "echo \"No tests configured\""
+    "test": "echo \"No tests configured\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.js,.mjs",
+    "lint:fix": "eslint . --ext .ts,.js,.mjs --fix"
   },
   "author": "Norbert Balaz",
   "license": "MIT",
