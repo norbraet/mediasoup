@@ -81,6 +81,9 @@ export default [
         sourceType: 'module',
         extraFileExtensions: ['.vue'],
       },
+      env: {
+        browser: true,
+      },
       globals: {
         process: 'readonly',
         console: 'readonly',
