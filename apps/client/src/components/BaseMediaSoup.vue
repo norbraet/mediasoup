@@ -1,18 +1,34 @@
 <script setup lang="ts">
   import { io, Socket } from 'socket.io-client'
-  import { ref, onUnmounted } from 'vue'
+  import { ref, onUnmounted, useTemplateRef } from 'vue'
   import { env } from '../config/env'
 
   let socket: Socket | null = null
   const isConnected = ref(false)
+
+  const connectButton = useTemplateRef<HTMLButtonElement>('connectButton')
+  const deviceSetupButton = useTemplateRef<HTMLButtonElement>('deviceSetupButton')
+  const createProducerButton = useTemplateRef<HTMLButtonElement>('createProducerButton')
+  const publishButton = useTemplateRef<HTMLButtonElement>('publishButton')
+  const createConsumeButton = useTemplateRef<HTMLButtonElement>('createConsumeButton')
+  const consumeButton = useTemplateRef<HTMLButtonElement>('consumeButton')
+  const disconnectButton = useTemplateRef<HTMLButtonElement>('disconnectButton')
 
   const initConnect = () => {
     socket = io(env.VITE_WS_URL, {
       transports: ['websocket', 'polling'],
     })
 
+    if (connectButton.value) connectButton.value.innerHTML = 'Connecting...'
+
     socket.on('connect', () => {
       console.log('Connected to server:', socket?.id)
+      if (connectButton.value && deviceSetupButton.value) {
+        connectButton.value.innerHTML = 'Connected'
+        connectButton.value.disabled = true
+        deviceSetupButton.value.disabled = false
+      }
+
       isConnected.value = true
     })
 
@@ -21,33 +37,30 @@
       isConnected.value = false
     })
 
-    // Add your mediasoup-specific socket listeners here
     socket.on('routerRtpCapabilities', (data) => {
       console.log('Received router RTP capabilities:', data)
       // Handle router capabilities
     })
-
-    // Add more socket listeners as needed for your mediasoup implementation
   }
 
   const deviceSetup = () => {
-    // Your device setup logic here
+    // TODO: Device setup logic here
   }
 
   const createProducer = () => {
-    // Your create producer logic here
+    // TODO: Create producer logic here
   }
 
   const publish = () => {
-    // Your publish logic here
+    // TODO: Publish logic here
   }
 
   const createConsume = () => {
-    // Your create consume logic here
+    // TODO: Create consume logic here
   }
 
   const consume = () => {
-    // Your consume logic here
+    // TODO: Consume logic here
   }
 
   const disconnect = () => {
@@ -67,18 +80,28 @@
 <template>
   <main class="container">
     <div role="group" class="controls">
-      <div class="connection-status">
-        <span :class="{ connected: isConnected, disconnected: !isConnected }">
-          {{ isConnected ? '🟢 Connected' : '🔴 Disconnected' }}
-        </span>
-      </div>
-      <button :disabled="isConnected" @click="initConnect()">Init Connect</button>
-      <button :disabled="!isConnected" @click="deviceSetup()">Create & Load Device</button>
-      <button :disabled="!isConnected" @click="createProducer()">Create Producer Transport</button>
-      <button :disabled="!isConnected" @click="publish()">Publish</button>
-      <button :disabled="!isConnected" @click="createConsume()">Create Consumer Transport</button>
-      <button :disabled="!isConnected" @click="consume()">Subscribe to feed</button>
-      <button :disabled="!isConnected" @click="disconnect()">Disconnect</button>
+      <p class="connection-status" :class="{ connected: isConnected, disconnected: !isConnected }">
+        {{ isConnected ? '🟢 Connected' : '🔴 Disconnected' }}
+      </p>
+      <button ref="connectButton" :disabled="isConnected" @click="initConnect()">
+        Init Connect
+      </button>
+      <button ref="deviceSetupButton" :disabled="!isConnected" @click="deviceSetup()">
+        Create & Load Device
+      </button>
+      <button ref="createProducerButton" :disabled="!isConnected" @click="createProducer()">
+        Create Producer Transport
+      </button>
+      <button ref="publishButton" :disabled="!isConnected" @click="publish()">Publish</button>
+      <button ref="createConsumeButton" :disabled="!isConnected" @click="createConsume()">
+        Create Consumer Transport
+      </button>
+      <button ref="consumeButton" :disabled="!isConnected" @click="consume()">
+        Subscribe to feed
+      </button>
+      <button ref="disconnectButton" :disabled="!isConnected" @click="disconnect()">
+        Disconnect
+      </button>
     </div>
 
     <div class="flex">
@@ -95,6 +118,33 @@
 </template>
 
 <style scoped>
+  button {
+    margin: 0.25rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  button:not(:disabled):hover {
+    background-color: #4a4a4a;
+  }
+
+  a {
+    font-weight: 500;
+    color: #646cff;
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: #535bf2;
+  }
+
   .controls {
     margin-bottom: 2rem;
   }
@@ -110,24 +160,6 @@
 
   .disconnected {
     color: #ef4444;
-  }
-
-  button {
-    margin: 0.25rem;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    background: #f9f9f9;
-    cursor: pointer;
-  }
-
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  button:not(:disabled):hover {
-    background: #e9e9e9;
   }
 
   .container {
@@ -159,19 +191,5 @@
     border: 1px solid #333;
     overflow: hidden;
     margin-top: 1rem;
-  }
-
-  button:hover {
-    background-color: #4a4a4a;
-  }
-
-  a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: none;
-  }
-
-  a:hover {
-    color: #535bf2;
   }
 </style>
