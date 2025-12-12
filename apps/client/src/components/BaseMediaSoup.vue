@@ -65,8 +65,8 @@
 </script>
 
 <template>
-  <div class="container">
-    <div class="controls">
+  <main class="container">
+    <div role="group" class="controls">
       <div class="connection-status">
         <span :class="{ connected: isConnected, disconnected: !isConnected }">
           {{ isConnected ? '🟢 Connected' : '🔴 Disconnected' }}
@@ -82,16 +82,16 @@
     </div>
 
     <div class="flex">
-      <div>
-        <h4>Local Media</h4>
-        <video id="local-video" autoplay inline class="vid"></video>
-      </div>
-      <div>
-        <h4>Consuming media</h4>
-        <video id="remote-video" autoplay inline class="vid"></video>
-      </div>
+      <section>
+        <h2>Local Media</h2>
+        <video id="local-video" autoplay playsinline class="vid"></video>
+      </section>
+      <section>
+        <h2>Consuming media</h2>
+        <video id="remote-video" autoplay playsinline class="vid"></video>
+      </section>
     </div>
-  </div>
+  </main>
 </template>
 
 <style scoped>
@@ -130,14 +130,21 @@
     background: #e9e9e9;
   }
 
+  .container {
+    margin: 0 auto;
+    max-width: 1400px;
+    padding: 2rem;
+  }
+
   .flex {
     display: flex;
     flex-direction: row;
     width: 100%;
     gap: 2rem;
+    margin-top: 1rem;
   }
 
-  .flex > div {
+  .flex > section {
     width: 50%;
   }
 
@@ -146,10 +153,25 @@
     height: auto;
     max-height: 60vh;
     aspect-ratio: 16 / 9;
-    background: #111;
+    background: #0f0f0f;
     border-radius: 8px;
     object-fit: cover;
     border: 1px solid #333;
     overflow: hidden;
+    margin-top: 1rem;
+  }
+
+  button:hover {
+    background-color: #4a4a4a;
+  }
+
+  a {
+    font-weight: 500;
+    color: #646cff;
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: #535bf2;
   }
 </style>
