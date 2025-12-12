@@ -7,7 +7,7 @@
     "rootDir": "src",
     "module": "ESNext",
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM"],
     "skipLibCheck": true,
     "isolatedModules": true,
     "esModuleInterop": true,
