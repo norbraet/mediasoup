@@ -4,6 +4,7 @@ import tsParser from '@typescript-eslint/parser'
 import vuePlugin from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
 import prettierConfig from 'eslint-config-prettier'
+import globals from 'globals'
 
 export default [
   // Global ignore patterns
@@ -81,10 +82,8 @@ export default [
         sourceType: 'module',
         extraFileExtensions: ['.vue'],
       },
-      env: {
-        browser: true,
-      },
       globals: {
+        ...globals.browser,
         process: 'readonly',
         console: 'readonly',
       },
