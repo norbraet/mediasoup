@@ -1,11 +1,17 @@
 <script setup lang="ts">
   import { io, Socket } from 'socket.io-client'
+  import { Device } from 'mediasoup-client'
   import { ref, onUnmounted, useTemplateRef } from 'vue'
   import { env } from '../config/env'
 
+  // Socket.IO
   let socket: Socket | null = null
   const isConnected = ref(false)
 
+  // Mediasoup
+  let device: Device
+
+  // Template Refs
   const connectButton = useTemplateRef<HTMLButtonElement>('connectButton')
   const deviceSetupButton = useTemplateRef<HTMLButtonElement>('deviceSetupButton')
   const createProducerButton = useTemplateRef<HTMLButtonElement>('createProducerButton')
@@ -15,17 +21,17 @@
   const disconnectButton = useTemplateRef<HTMLButtonElement>('disconnectButton')
 
   const initConnect = () => {
-    socket = io(env.VITE_WS_URL, {
-      transports: ['websocket', 'polling'],
-    })
+    socket = io(env.VITE_API_URL)
 
-    if (connectButton.value) connectButton.value.innerHTML = 'Connecting...'
+    if (connectButton.value) {
+      connectButton.value.innerHTML = 'Connecting...'
+      connectButton.value.disabled = true
+    }
 
     socket.on('connect', () => {
       console.log('Connected to server:', socket?.id)
       if (connectButton.value && deviceSetupButton.value) {
         connectButton.value.innerHTML = 'Connected'
-        connectButton.value.disabled = true
         deviceSetupButton.value.disabled = false
       }
 
@@ -43,8 +49,10 @@
     })
   }
 
-  const deviceSetup = () => {
-    // TODO: Device setup logic here
+  const deviceSetup = async () => {
+    device = new Device()
+    const routerRtpCapabilities = await socket?.emitWithAck('getRtpCap')
+    await device.load({ routerRtpCapabilities })
   }
 
   const createProducer = () => {
@@ -83,25 +91,17 @@
       <p class="connection-status" :class="{ connected: isConnected, disconnected: !isConnected }">
         {{ isConnected ? '🟢 Connected' : '🔴 Disconnected' }}
       </p>
-      <button ref="connectButton" :disabled="isConnected" @click="initConnect()">
-        Init Connect
-      </button>
-      <button ref="deviceSetupButton" :disabled="!isConnected" @click="deviceSetup()">
-        Create & Load Device
-      </button>
-      <button ref="createProducerButton" :disabled="!isConnected" @click="createProducer()">
+      <button ref="connectButton" @click="initConnect()">Init Connect</button>
+      <button ref="deviceSetupButton" disabled @click="deviceSetup()">Create & Load Device</button>
+      <button ref="createProducerButton" disabled @click="createProducer()">
         Create Producer Transport
       </button>
-      <button ref="publishButton" :disabled="!isConnected" @click="publish()">Publish</button>
-      <button ref="createConsumeButton" :disabled="!isConnected" @click="createConsume()">
+      <button ref="publishButton" disabled @click="publish()">Publish</button>
+      <button ref="createConsumeButton" disabled @click="createConsume()">
         Create Consumer Transport
       </button>
-      <button ref="consumeButton" :disabled="!isConnected" @click="consume()">
-        Subscribe to feed
-      </button>
-      <button ref="disconnectButton" :disabled="!isConnected" @click="disconnect()">
-        Disconnect
-      </button>
+      <button ref="consumeButton" disabled @click="consume()">Subscribe to feed</button>
+      <button ref="disconnectButton" disabled @click="disconnect()">Disconnect</button>
     </div>
 
     <div class="flex">

@@ -17,7 +17,7 @@ async function main(): Promise<void> {
   }
 
   const httpsServer = createServer(options, app).listen(env.EXPRESS_PORT)
-  new SocketIOServer(httpsServer, {
+  const io = new SocketIOServer(httpsServer, {
     cors: {
       origin: env.CORS_ORIGIN,
       methods: ['GET', 'POST'],
@@ -26,7 +26,13 @@ async function main(): Promise<void> {
 
   console.log('Server is running on port:', env.EXPRESS_PORT)
 
-  initMediasoup()
+  const router = await initMediasoup()
+
+  io.on('connect', (socket) => {
+    socket.on('getRtpCap', (cb) => {
+      cb(router.rtpCapabilities)
+    })
+  })
 }
 
 try {
