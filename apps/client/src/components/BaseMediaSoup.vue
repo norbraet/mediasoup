@@ -1,88 +1,113 @@
 <script setup lang="ts">
   import { io, Socket } from 'socket.io-client'
   import { Device } from 'mediasoup-client'
-  import { ref, onUnmounted, useTemplateRef } from 'vue'
+  import { ref, computed, onUnmounted } from 'vue'
   import { env } from '../config/env'
 
-  // Socket.IO
-  let socket: Socket | null = null
-  const isConnected = ref(false)
+  // --------------------
+  // Socket / Mediasoup
+  // --------------------
+  let socket: Socket | null = null,
+    device: Device | null = null
 
-  // Mediasoup
-  let device: Device
+  // --------------------
+  // UI / App State
+  // --------------------
+  const isConnecting = ref(false),
+    isConnected = ref(false),
+    deviceLoaded = ref(false),
+    producerCreated = ref(false),
+    isPublishing = ref(false),
+    consumerCreated = ref(false)
 
-  // Template Refs
-  const connectButton = useTemplateRef<HTMLButtonElement>('connectButton')
-  const deviceSetupButton = useTemplateRef<HTMLButtonElement>('deviceSetupButton')
-  const createProducerButton = useTemplateRef<HTMLButtonElement>('createProducerButton')
-  const publishButton = useTemplateRef<HTMLButtonElement>('publishButton')
-  const createConsumeButton = useTemplateRef<HTMLButtonElement>('createConsumeButton')
-  const consumeButton = useTemplateRef<HTMLButtonElement>('consumeButton')
-  const disconnectButton = useTemplateRef<HTMLButtonElement>('disconnectButton')
+  // --------------------
+  // Derived button states
+  // --------------------
+  const canConnect = computed(() => !isConnecting.value && !isConnected.value),
+    canSetupDevice = computed(() => isConnected.value && !deviceLoaded.value),
+    canCreateProducer = computed(() => deviceLoaded.value && !producerCreated.value),
+    canPublish = computed(() => producerCreated.value && !isPublishing.value),
+    canCreateConsumer = computed(() => deviceLoaded.value && !consumerCreated.value),
+    canConsume = computed(() => consumerCreated.value),
+    canDisconnect = computed(() => isConnected.value)
 
+  // --------------------
+  // Actions
+  // --------------------
   const initConnect = () => {
+    if (!canConnect.value) return
+
+    isConnecting.value = true
     socket = io(env.VITE_API_URL)
 
-    if (connectButton.value) {
-      connectButton.value.innerHTML = 'Connecting...'
-      connectButton.value.disabled = true
-    }
-
     socket.on('connect', () => {
-      console.log('Connected to server:', socket?.id)
-      if (connectButton.value && deviceSetupButton.value) {
-        connectButton.value.innerHTML = 'Connected'
-        deviceSetupButton.value.disabled = false
-      }
-
+      console.log('Connected:', socket?.id)
+      isConnecting.value = false
       isConnected.value = true
     })
 
     socket.on('disconnect', () => {
-      console.log('Disconnected from server')
-      isConnected.value = false
-    })
-
-    socket.on('routerRtpCapabilities', (data) => {
-      console.log('Received router RTP capabilities:', data)
-      // Handle router capabilities
+      console.log('Disconnected')
+      resetState()
     })
   }
 
   const deviceSetup = async () => {
+    if (!socket || deviceLoaded.value) return
+
     device = new Device()
-    const routerRtpCapabilities = await socket?.emitWithAck('getRtpCap')
+    const routerRtpCapabilities = await socket.emitWithAck('getRtpCap')
     await device.load({ routerRtpCapabilities })
+
+    deviceLoaded.value = true
   }
 
   const createProducer = () => {
-    // TODO: Create producer logic here
+    if (!canCreateProducer.value) return
+
+    // TODO: mediasoup producer setup
+    producerCreated.value = true
   }
 
   const publish = () => {
-    // TODO: Publish logic here
+    if (!canPublish.value) return
+
+    // TODO: publish logic
+    isPublishing.value = true
   }
 
   const createConsume = () => {
-    // TODO: Create consume logic here
+    if (!canCreateConsumer.value) return
+
+    // TODO: consumer transport setup
+    consumerCreated.value = true
   }
 
   const consume = () => {
-    // TODO: Consume logic here
+    if (!canConsume.value) return
+
+    // TODO: consume media
   }
 
   const disconnect = () => {
-    if (socket) {
-      socket.disconnect()
-      socket = null
-      isConnected.value = false
-    }
+    if (!socket) return
+
+    socket.disconnect()
+    socket = null
+    resetState()
   }
 
-  // Clean up socket connection when component is unmounted
-  onUnmounted(() => {
-    disconnect()
-  })
+  const resetState = () => {
+    isConnecting.value = false
+    isConnected.value = false
+    deviceLoaded.value = false
+    producerCreated.value = false
+    isPublishing.value = false
+    consumerCreated.value = false
+    device = null
+  }
+
+  onUnmounted(disconnect)
 </script>
 
 <template>
@@ -91,27 +116,37 @@
       <p class="connection-status" :class="{ connected: isConnected, disconnected: !isConnected }">
         {{ isConnected ? '🟢 Connected' : '🔴 Disconnected' }}
       </p>
-      <button ref="connectButton" @click="initConnect()">Init Connect</button>
-      <button ref="deviceSetupButton" disabled @click="deviceSetup()">Create & Load Device</button>
-      <button ref="createProducerButton" disabled @click="createProducer()">
+
+      <button :disabled="!canConnect" @click="initConnect">
+        {{ isConnecting ? 'Connecting…' : 'Init Connect' }}
+      </button>
+
+      <button :disabled="!canSetupDevice" @click="deviceSetup">Create & Load Device</button>
+
+      <button :disabled="!canCreateProducer" @click="createProducer">
         Create Producer Transport
       </button>
-      <button ref="publishButton" disabled @click="publish()">Publish</button>
-      <button ref="createConsumeButton" disabled @click="createConsume()">
+
+      <button :disabled="!canPublish" @click="publish">Publish</button>
+
+      <button :disabled="!canCreateConsumer" @click="createConsume">
         Create Consumer Transport
       </button>
-      <button ref="consumeButton" disabled @click="consume()">Subscribe to feed</button>
-      <button ref="disconnectButton" disabled @click="disconnect()">Disconnect</button>
+
+      <button :disabled="!canConsume" @click="consume">Subscribe to feed</button>
+
+      <button :disabled="!canDisconnect" @click="disconnect">Disconnect</button>
     </div>
 
     <div class="flex">
       <section>
         <h2>Local Media</h2>
-        <video id="local-video" autoplay playsinline class="vid"></video>
+        <video autoplay playsinline class="vid"></video>
       </section>
+
       <section>
         <h2>Consuming media</h2>
-        <video id="remote-video" autoplay playsinline class="vid"></video>
+        <video autoplay playsinline class="vid"></video>
       </section>
     </div>
   </main>
