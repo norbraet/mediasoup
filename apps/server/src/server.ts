@@ -81,11 +81,14 @@ async function main(): Promise<void> {
      */
     socket.on(
       'connect-transport',
-      async (dtlsParameters: types.DtlsParameters, acknowledgment: (message: string) => void) => {
+      async (
+        data: { dtlsParameters: types.DtlsParameters },
+        acknowledgment: (message: string) => void
+      ) => {
         // TODO: The message should be an own shared type so the client knows what to expect back
         try {
           if (thisClientProducerTransport) {
-            await thisClientProducerTransport?.connect({ dtlsParameters })
+            await thisClientProducerTransport.connect({ dtlsParameters: data.dtlsParameters })
             acknowledgment('success')
           }
         } catch (error) {
