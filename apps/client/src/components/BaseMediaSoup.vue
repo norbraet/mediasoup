@@ -3,12 +3,15 @@
   import { Device } from 'mediasoup-client'
   import { ref, computed, onUnmounted } from 'vue'
   import { env } from '../config/env'
+  import { types } from 'mediasoup-client'
 
   // --------------------
-  // Socket / Mediasoup
+  // Globals
   // --------------------
   let socket: Socket | null = null,
-    device: Device | null = null
+    device: Device | null = null,
+    localStream: MediaStream | null = null,
+    producerTransport = null
 
   // --------------------
   // UI / App State
@@ -19,6 +22,9 @@
     producerCreated = ref(false),
     isPublishing = ref(false),
     consumerCreated = ref(false)
+
+  const localVideo = ref<HTMLVideoElement | null>(null),
+    remoteVideo = ref<HTMLVideoElement | null>(null)
 
   // --------------------
   // Derived button states
@@ -62,10 +68,36 @@
     deviceLoaded.value = true
   }
 
-  const createProducer = () => {
-    if (!canCreateProducer.value) return
+  const createProducer = async () => {
+    if (!canCreateProducer.value || socket === null || device === null) return
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      })
+      if (localVideo.value) {
+        localVideo.value.srcObject = localStream
+        localVideo.value.play()
+      }
+    } catch (error) {
+      console.log('GetUserMedia Error in createProducer() :>> ', error)
+    }
 
-    // TODO: mediasoup producer setup
+    const transportOptions: types.TransportOptions = await socket.emitWithAck(
+      'create-producer-transport'
+    )
+    producerTransport = device.createSendTransport(transportOptions)
+
+    producerTransport.on(
+      'connect',
+      async ({ dtlsParameters: _dtlsParameters }, _callback, _errback) => {
+        console.log('Transport connect event has fired!')
+      }
+    )
+    producerTransport.on('produce', async (_parameters, _callback, _errback) => {
+      console.log('Transport produce event has fired!')
+    })
+
     producerCreated.value = true
   }
 
@@ -141,12 +173,12 @@
     <div class="flex">
       <section>
         <h2>Local Media</h2>
-        <video autoplay playsinline class="vid"></video>
+        <video ref="localVideo" autoplay playsinline class="vid"></video>
       </section>
 
       <section>
         <h2>Consuming media</h2>
-        <video autoplay playsinline class="vid"></video>
+        <video ref="remoteVideo" autoplay playsinline class="vid"></video>
       </section>
     </div>
   </main>

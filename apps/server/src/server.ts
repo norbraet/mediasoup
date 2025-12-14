@@ -4,6 +4,7 @@ import { createApp } from './express/app'
 import { initMediasoup } from './mediasoup/createMediasoup'
 import env from './config/env'
 import { Server as SocketIOServer } from 'socket.io'
+import { types } from 'mediasoup'
 
 async function main(): Promise<void> {
   const app = createApp()
@@ -29,8 +30,37 @@ async function main(): Promise<void> {
   const router = await initMediasoup()
 
   io.on('connect', (socket) => {
-    socket.on('getRtpCap', (cb) => {
-      cb(router.rtpCapabilities)
+    let thisClientProducerTransport: types.WebRtcTransport | null = null
+
+    socket.on('getRtpCap', (acknowledgement) => {
+      acknowledgement(router.rtpCapabilities)
+    })
+
+    socket.on('create-producer-transport', async (acknowledgement) => {
+      thisClientProducerTransport = await router.createWebRtcTransport({
+        enableUdp: true,
+        enableTcp: true,
+        preferUdp: true,
+        listenInfos: [
+          {
+            protocol: 'udp',
+            ip: '127.0.0.1',
+          },
+          {
+            protocol: 'tcp',
+            ip: '127.0.0.1',
+          },
+        ],
+      })
+      const clientTransportParams = {
+        id: thisClientProducerTransport.id,
+        iceParmeters: thisClientProducerTransport.iceParameters,
+        iceCandidates: thisClientProducerTransport.iceCandidates,
+        dtlsParameters: thisClientProducerTransport.dtlsParameters,
+      }
+
+      console.debug('clientTransportParams', clientTransportParams)
+      acknowledgement(clientTransportParams)
     })
   })
 }
