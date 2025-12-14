@@ -91,29 +91,50 @@
     producerTransport.on(
       'connect',
       async ({ dtlsParameters: dtlsParameters }, callback, errback) => {
-        if (socket === null) return
+        if (socket === null) {
+          console.error('Socket is null in connect event')
+          errback(new Error('Socket disconnected'))
+          return
+        }
 
-        console.log('Transport connect event has fired!')
-        // TODO: shared typ nutzen
-        const resp = await socket.emitWithAck('connect-transport', { dtlsParameters })
-        console.log('resp :>> ', resp)
+        try {
+          console.log('Transport connect event has fired!')
+          // TODO: shared typ nutzen
+          const resp = await socket.emitWithAck('connect-transport', { dtlsParameters })
+          console.log('resp :>> ', resp)
 
-        if (resp === 'success') {
-          callback()
-        } else if (resp === 'error') {
-          errback()
+          if (resp === 'success') {
+            callback()
+          } else if (resp === 'error') {
+            errback(new Error('Server responded with error'))
+          } else {
+            errback(new Error(`Unexpected response: ${resp}`))
+          }
+        } catch (error) {
+          console.error('Error in connect event handler:', error)
+          errback(error instanceof Error ? error : new Error('Unknown error'))
         }
       }
     )
-    producerTransport.on('produce', async (parameters, callback, errback) => {
-      if (socket === null) return
 
-      const resp = await socket.emitWithAck('start-producing', parameters)
-      console.log('resp :>> ', resp)
-      if (resp === 'error') {
-        errback()
-      } else {
-        callback({ id: resp })
+    producerTransport.on('produce', async (parameters, callback, errback) => {
+      if (socket === null) {
+        console.error('Socket is null in produce event')
+        errback(new Error('Socket disconnected'))
+        return
+      }
+
+      try {
+        const resp = await socket.emitWithAck('start-producing', parameters)
+        console.log('resp :>> ', resp)
+        if (resp === 'error') {
+          errback(new Error('Server responded with error'))
+        } else {
+          callback({ id: resp })
+        }
+      } catch (error) {
+        console.error('Error in produce event handler:', error)
+        errback(error instanceof Error ? error : new Error('Unknown error'))
       }
     })
 
@@ -123,12 +144,21 @@
   const produce = async () => {
     if (!canProduce.value) return
 
-    const track = localStream.getVideoTracks()[0]
-    producer = await producerTransport.produce({ track })
-    console.log('producer :>> ', producer)
+    try {
+      const track = localStream.getVideoTracks()[0]
+      if (!track) {
+        console.error('No video track available')
+        return
+      }
 
-    // TODO: publish logic
-    isProducing.value = true
+      producer = await producerTransport.produce({ track })
+      console.log('producer :>> ', producer)
+
+      // TODO: publish logic
+      isProducing.value = true
+    } catch (error) {
+      console.error('Error in produce() :>> ', error)
+    }
   }
 
   const createConsume = () => {
