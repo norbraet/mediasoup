@@ -20,7 +20,7 @@
     isConnected = ref(false),
     deviceLoaded = ref(false),
     producerCreated = ref(false),
-    isPublishing = ref(false),
+    isProducing = ref(false),
     consumerCreated = ref(false)
 
   const localVideo = ref<HTMLVideoElement | null>(null),
@@ -32,7 +32,7 @@
   const canConnect = computed(() => !isConnecting.value && !isConnected.value),
     canSetupDevice = computed(() => isConnected.value && !deviceLoaded.value),
     canCreateProducer = computed(() => deviceLoaded.value && !producerCreated.value),
-    canPublish = computed(() => producerCreated.value && !isPublishing.value),
+    canProduce = computed(() => producerCreated.value && !isProducing.value),
     canCreateConsumer = computed(() => deviceLoaded.value && !consumerCreated.value),
     canConsume = computed(() => consumerCreated.value),
     canDisconnect = computed(() => isConnected.value)
@@ -101,11 +101,11 @@
     producerCreated.value = true
   }
 
-  const publish = () => {
-    if (!canPublish.value) return
+  const produce = () => {
+    if (!canProduce.value) return
 
     // TODO: publish logic
-    isPublishing.value = true
+    isProducing.value = true
   }
 
   const createConsume = () => {
@@ -134,7 +134,7 @@
     isConnected.value = false
     deviceLoaded.value = false
     producerCreated.value = false
-    isPublishing.value = false
+    isProducing.value = false
     consumerCreated.value = false
     device = null
   }
@@ -159,7 +159,7 @@
         Create Producer Transport
       </button>
 
-      <button :disabled="!canPublish" @click="publish">Publish</button>
+      <button :disabled="!canProduce" @click="produce">Produce</button>
 
       <button :disabled="!canCreateConsumer" @click="createConsume">
         Create Consumer Transport
