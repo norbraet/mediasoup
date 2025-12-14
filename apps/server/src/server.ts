@@ -54,7 +54,7 @@ async function main(): Promise<void> {
       })
       const clientTransportParams = {
         id: thisClientProducerTransport.id,
-        iceParmeters: thisClientProducerTransport.iceParameters,
+        iceParameters: thisClientProducerTransport.iceParameters,
         iceCandidates: thisClientProducerTransport.iceCandidates,
         dtlsParameters: thisClientProducerTransport.dtlsParameters,
       }
