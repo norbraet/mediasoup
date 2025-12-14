@@ -1,17 +1,17 @@
 <script setup lang="ts">
   import { io, Socket } from 'socket.io-client'
-  import { Device } from 'mediasoup-client'
+  import { types, Device } from 'mediasoup-client'
   import { ref, computed, onUnmounted } from 'vue'
   import { env } from '../config/env'
-  import { types } from 'mediasoup-client'
 
   // --------------------
   // Globals
   // --------------------
-  let socket: Socket | null = null,
-    device: Device | null = null,
-    localStream: MediaStream | null = null,
-    producerTransport = null
+  let socket: Socket | null,
+    device: Device | null,
+    localStream: MediaStream,
+    producerTransport: types.Transport,
+    producer: types.Producer
 
   // --------------------
   // UI / App State
@@ -90,19 +90,42 @@
 
     producerTransport.on(
       'connect',
-      async ({ dtlsParameters: _dtlsParameters }, _callback, _errback) => {
+      async ({ dtlsParameters: dtlsParameters }, callback, errback) => {
+        if (socket === null) return
+
         console.log('Transport connect event has fired!')
+        // TODO: shared typ nutzen
+        const resp = await socket.emitWithAck('connect-transport', { dtlsParameters })
+        console.log('resp :>> ', resp)
+
+        if (resp === 'success') {
+          callback()
+        } else if (resp === 'error') {
+          errback()
+        }
       }
     )
-    producerTransport.on('produce', async (_parameters, _callback, _errback) => {
-      console.log('Transport produce event has fired!')
+    producerTransport.on('produce', async (parameters, callback, errback) => {
+      if (socket === null) return
+
+      const resp = await socket.emitWithAck('start-producing', parameters)
+      console.log('resp :>> ', resp)
+      if (resp === 'error') {
+        errback()
+      } else {
+        callback({ id: resp })
+      }
     })
 
     producerCreated.value = true
   }
 
-  const produce = () => {
+  const produce = async () => {
     if (!canProduce.value) return
+
+    const track = localStream.getVideoTracks()[0]
+    producer = await producerTransport.produce({ track })
+    console.log('producer :>> ', producer)
 
     // TODO: publish logic
     isProducing.value = true
