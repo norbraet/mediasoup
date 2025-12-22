@@ -5,13 +5,8 @@ import { initMediasoup } from './mediasoup/createMediasoup'
 import env from './config/env'
 import { Server as SocketIOServer } from 'socket.io'
 import { types } from 'mediasoup'
-
-type ClientTransportParams = {
-  id: string
-  iceParameters: types.IceParameters
-  iceCandidates: types.IceCandidate[]
-  dtlsParameters: types.DtlsParameters
-}
+import { createWebRtcTransport } from './mediasoup/createWebRtcTransport'
+import { ClientTransportParams } from './mediasoup/types'
 
 type ClientProducingParams = Pick<types.ProducerOptions, 'kind' | 'rtpParameters' | 'appData'>
 
@@ -42,6 +37,10 @@ async function main(): Promise<void> {
     let thisClientProducerTransport: types.WebRtcTransport | null = null
     let thisClientProducer: types.Producer | null = null
 
+    let thisClientConsumerTransport: types.WebRtcTransport | null = null
+    //eslint-disable-next-line
+    const thisClientConsumer: types.Producer | null = null
+
     socket.on('getRtpCap', (acknowledgement: (rtpCapabilities: types.RtpCapabilities) => void) => {
       acknowledgement(router.rtpCapabilities)
     })
@@ -49,29 +48,17 @@ async function main(): Promise<void> {
     socket.on(
       'create-producer-transport',
       async (acknowledgement: (params: ClientTransportParams) => void) => {
-        thisClientProducerTransport = await router.createWebRtcTransport({
-          enableUdp: true,
-          enableTcp: true,
-          preferUdp: true,
-          listenInfos: [
-            {
-              protocol: 'udp',
-              ip: '127.0.0.1',
-            },
-            {
-              protocol: 'tcp',
-              ip: '127.0.0.1',
-            },
-          ],
-        })
-        const clientTransportParams: ClientTransportParams = {
-          id: thisClientProducerTransport.id,
-          iceParameters: thisClientProducerTransport.iceParameters,
-          iceCandidates: thisClientProducerTransport.iceCandidates,
-          dtlsParameters: thisClientProducerTransport.dtlsParameters,
-        }
+        const { transport, clientTransportParams } = await createWebRtcTransport(router)
+        thisClientProducerTransport = transport
+        acknowledgement(clientTransportParams)
+      }
+    )
 
-        console.debug('clientTransportParams', clientTransportParams)
+    socket.on(
+      'create-consumer-transport',
+      async (acknowledgement: (params: ClientTransportParams) => void) => {
+        const { transport, clientTransportParams } = await createWebRtcTransport(router)
+        thisClientConsumerTransport = transport
         acknowledgement(clientTransportParams)
       }
     )
@@ -89,6 +76,27 @@ async function main(): Promise<void> {
         try {
           if (thisClientProducerTransport) {
             await thisClientProducerTransport.connect({ dtlsParameters: data.dtlsParameters })
+            acknowledgment('success')
+          }
+        } catch (error) {
+          console.error('connect-transport', error)
+          acknowledgment('error')
+        }
+      }
+    )
+
+    // TODO: connect-consumer-transport and connect-transport is exactly the same logic.
+    //  Refactor it so it accepts another parameter that can determine which transport to connect with
+    socket.on(
+      'connect-consumer-transport',
+      async (
+        data: { dtlsParameters: types.DtlsParameters },
+        acknowledgment: (message: string) => void
+      ) => {
+        // TODO: The message should be an own shared type so the client knows what to expect back
+        try {
+          if (thisClientConsumerTransport) {
+            await thisClientConsumerTransport.connect({ dtlsParameters: data.dtlsParameters })
             acknowledgment('success')
           }
         } catch (error) {

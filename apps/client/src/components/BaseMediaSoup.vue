@@ -11,7 +11,10 @@
     device: Device | null,
     localStream: MediaStream,
     producerTransport: types.Transport,
-    producer: types.Producer
+    producer: types.Producer,
+    consumerTransport: types.Transport,
+    //eslint-disable-next-line
+    _consumer: types.Consumer
 
   // --------------------
   // UI / App State
@@ -161,8 +164,42 @@
     }
   }
 
-  const createConsume = () => {
-    if (!canCreateConsumer.value) return
+  const createConsumer = async () => {
+    if (!canCreateConsumer.value || socket === null || device === null) return
+
+    const transportOptions: types.TransportOptions = await socket.emitWithAck(
+      'create-consumer-transport'
+    )
+    consumerTransport = device.createRecvTransport(transportOptions)
+
+    consumerTransport.on(
+      'connect',
+      async ({ dtlsParameters: dtlsParameters }, callback, errback) => {
+        if (socket === null) {
+          console.error('Socket is null in connect event')
+          errback(new Error('Socket disconnected'))
+          return
+        }
+
+        try {
+          console.log('Transport connect event has fired!')
+          // TODO: shared typ nutzen
+          const resp = await socket.emitWithAck('connect-consumer-transport', { dtlsParameters })
+          console.log('resp :>> ', resp)
+
+          if (resp === 'success') {
+            callback()
+          } else if (resp === 'error') {
+            errback(new Error('Server responded with error'))
+          } else {
+            errback(new Error(`Unexpected response: ${resp}`))
+          }
+        } catch (error) {
+          console.error('Error in connect event handler:', error)
+          errback(error instanceof Error ? error : new Error('Unknown error'))
+        }
+      }
+    )
 
     // TODO: consumer transport setup
     consumerCreated.value = true
@@ -214,7 +251,7 @@
 
       <button :disabled="!canProduce" @click="produce">Produce</button>
 
-      <button :disabled="!canCreateConsumer" @click="createConsume">
+      <button :disabled="!canCreateConsumer" @click="createConsumer">
         Create Consumer Transport
       </button>
 
