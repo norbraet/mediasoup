@@ -70,17 +70,17 @@ async function main(): Promise<void> {
       'connect-transport',
       async (
         data: { dtlsParameters: types.DtlsParameters },
-        acknowledgment: (message: string) => void
+        acknowledgement: (message: string) => void
       ) => {
         // TODO: The message should be an own shared type so the client knows what to expect back
         try {
           if (thisClientProducerTransport) {
             await thisClientProducerTransport.connect({ dtlsParameters: data.dtlsParameters })
-            acknowledgment('success')
+            acknowledgement('success')
           }
         } catch (error) {
           console.error('connect-transport', error)
-          acknowledgment('error')
+          acknowledgement('error')
         }
       }
     )
@@ -91,33 +91,33 @@ async function main(): Promise<void> {
       'connect-consumer-transport',
       async (
         data: { dtlsParameters: types.DtlsParameters },
-        acknowledgment: (message: string) => void
+        acknowledgement: (message: string) => void
       ) => {
         // TODO: The message should be an own shared type so the client knows what to expect back
         try {
           if (thisClientConsumerTransport) {
             await thisClientConsumerTransport.connect({ dtlsParameters: data.dtlsParameters })
-            acknowledgment('success')
+            acknowledgement('success')
           }
         } catch (error) {
           console.error('connect-transport', error)
-          acknowledgment('error')
+          acknowledgement('error')
         }
       }
     )
 
     socket.on(
       'start-producing',
-      async (parameters: ClientProducingParams, acknowledgment: (message: string) => void) => {
+      async (parameters: ClientProducingParams, acknowledgement: (message: string) => void) => {
         try {
           if (!thisClientProducerTransport) throw new Error('No Client Producer Transport')
 
           thisClientProducer = await thisClientProducerTransport.produce(parameters)
           // TODO: The message should be an own shared type so the client knows what to expect back
-          acknowledgment(thisClientProducer.id)
+          acknowledgement(thisClientProducer.id)
         } catch (error) {
           console.error('start-producing', error)
-          acknowledgment('error')
+          acknowledgement('error')
         }
       }
     )
