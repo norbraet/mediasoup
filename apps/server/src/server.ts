@@ -36,10 +36,8 @@ async function main(): Promise<void> {
   io.on('connect', (socket) => {
     let thisClientProducerTransport: types.WebRtcTransport | null = null
     let thisClientProducer: types.Producer | null = null
-
     let thisClientConsumerTransport: types.WebRtcTransport | null = null
-    //eslint-disable-next-line
-    const thisClientConsumer: types.Producer | null = null
+    let thisClientConsumer: types.Consumer | null = null
 
     socket.on('getRtpCap', (acknowledgement: (rtpCapabilities: types.RtpCapabilities) => void) => {
       acknowledgement(router.rtpCapabilities)
@@ -121,6 +119,52 @@ async function main(): Promise<void> {
         }
       }
     )
+
+    socket.on(
+      'consume-media',
+      async (data: { rtpCapabilities: types.RtpCapabilities }, acknowledgement) => {
+        const { rtpCapabilities } = data
+
+        try {
+          if (!thisClientProducer) {
+            // TODO: Create a shared type for the options that can be send back to the client and use
+            // the type on the client and on the server
+            acknowledgement('noProducer')
+          } else if (!router.canConsume({ producerId: thisClientProducer.id, rtpCapabilities })) {
+            // TODO: Same here as stated aboce
+            acknowledgement('cannotConsume')
+          } else {
+            if (thisClientConsumerTransport === null) {
+              acknowledgement('noTransport')
+              return
+            }
+
+            thisClientConsumer = await thisClientConsumerTransport.consume({
+              producerId: thisClientProducer.id,
+              rtpCapabilities,
+              paused: true,
+            })
+
+            const consumerParams = {
+              producerId: thisClientProducer.id,
+              id: thisClientConsumer.id,
+              kind: thisClientConsumer.kind,
+              rtpParameters: thisClientConsumer.rtpParameters,
+            }
+
+            acknowledgement(consumerParams)
+          }
+        } catch (error) {
+          console.error('consume-media error:', error)
+          acknowledgement('error')
+        }
+      }
+    )
+
+    socket.on('unpause-consumer', async (_acknowledgement) => {
+      if (thisClientConsumer === null) return
+      await thisClientConsumer.resume()
+    })
   })
 }
 

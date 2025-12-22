@@ -13,8 +13,7 @@
     producerTransport: types.Transport,
     producer: types.Producer,
     consumerTransport: types.Transport,
-    //eslint-disable-next-line
-    _consumer: types.Consumer
+    consumer: types.Consumer
 
   // --------------------
   // UI / App State
@@ -201,14 +200,28 @@
       }
     )
 
-    // TODO: consumer transport setup
     consumerCreated.value = true
   }
 
-  const consume = () => {
-    if (!canConsume.value) return
+  const consume = async () => {
+    if (!canConsume.value || socket === null || device === null) return
 
-    // TODO: consume media
+    const consumerParams = await socket.emitWithAck('consume-media', {
+      rtpCapabilities: device.rtpCapabilities,
+    })
+
+    console.debug('consumerParams :>> ', consumerParams)
+    if (consumerParams === 'noProducer') {
+      console.warn('There is no producer set up to consume')
+    } else if (consumerParams === 'cannotConsume') {
+      console.warn('rtpCapabilities failed. Cannot consume')
+    } else {
+      consumer = await consumerTransport.consume(consumerParams)
+      if (remoteVideo.value) {
+        remoteVideo.value.srcObject = new MediaStream([consumer.track])
+        await socket.emitWithAck('unpause-consumer')
+      }
+    }
   }
 
   const disconnect = () => {
