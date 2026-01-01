@@ -55,6 +55,7 @@ export default [
         sourceType: 'module',
       },
       globals: {
+        ...globals.browser,
         process: 'readonly',
         console: 'readonly',
       },

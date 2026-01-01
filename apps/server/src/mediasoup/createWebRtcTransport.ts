@@ -1,5 +1,6 @@
 import { types } from 'mediasoup'
 import { ClientTransportParams } from './types'
+import env from '../config/env'
 
 export const createWebRtcTransport = async (
   router: types.Router
@@ -11,15 +12,9 @@ export const createWebRtcTransport = async (
     enableUdp: true,
     enableTcp: true,
     preferUdp: true,
-    listenInfos: [
-      {
-        protocol: 'udp',
-        ip: '127.0.0.1',
-      },
-      {
-        protocol: 'tcp',
-        ip: '127.0.0.1',
-      },
+    listenIps: [
+      { ip: '0.0.0.0', announcedIp: env.LOCAL_IP },
+      { ip: '127.0.0.1', announcedIp: undefined },
     ],
   })
 

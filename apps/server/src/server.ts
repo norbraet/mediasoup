@@ -21,13 +21,33 @@ async function main(): Promise<void> {
     cert: cert,
   }
 
-  const httpsServer = createServer(options, app).listen(env.EXPRESS_PORT)
+  const httpsServer = createServer(options, app).listen(env.EXPRESS_PORT, () => {
+    console.log('🚀 Conference Server Started!')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log(`📡 Server URL: ${env.SERVER_URL}`)
+    console.log(`🌐 Network Access:`)
+    env.ALL_IPS.forEach((ip) => {
+      if (ip !== 'localhost' && ip !== '127.0.0.1') {
+        console.log(`   https://${ip}:${env.EXPRESS_PORT}`)
+      }
+    })
+    console.log(`💻 Local Access: https://localhost:${env.EXPRESS_PORT}`)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log(`📱 Client should be accessible at:`)
+    env.ALL_IPS.forEach((ip) => {
+      if (ip !== 'localhost' && ip !== '127.0.0.1') {
+        console.log(`   https://${ip}:${env.CLIENT_PORT}`)
+      }
+    })
+  })
+
   const io = new SocketIOServer(httpsServer, {
     cors: {
-      origin: env.CORS_ORIGIN,
+      origin: env.CORS_ORIGINS,
       methods: ['GET', 'POST'],
     },
   })
+  let thisProducer: types.Producer | null = null // The producer will be a global and whoever produced last
 
   console.debug('Server is running on port:', env.EXPRESS_PORT)
 
@@ -111,6 +131,8 @@ async function main(): Promise<void> {
           if (!thisClientProducerTransport) throw new Error('No Client Producer Transport')
 
           thisClientProducer = await thisClientProducerTransport.produce(parameters)
+          thisProducer = thisClientProducer
+
           // TODO: The message should be an own shared type so the client knows what to expect back
           acknowledgement(thisClientProducer.id)
         } catch (error) {
@@ -126,11 +148,11 @@ async function main(): Promise<void> {
         const { rtpCapabilities } = data
 
         try {
-          if (!thisClientProducer) {
+          if (!thisProducer) {
             // TODO: Create a shared type for the options that can be send back to the client and use
             // the type on the client and on the server
             acknowledgement('noProducer')
-          } else if (!router.canConsume({ producerId: thisClientProducer.id, rtpCapabilities })) {
+          } else if (!router.canConsume({ producerId: thisProducer.id, rtpCapabilities })) {
             // TODO: Same here as stated aboce
             acknowledgement('cannotConsume')
           } else {
@@ -140,13 +162,13 @@ async function main(): Promise<void> {
             }
 
             thisClientConsumer = await thisClientConsumerTransport.consume({
-              producerId: thisClientProducer.id,
+              producerId: thisProducer.id,
               rtpCapabilities,
               paused: true,
             })
 
             const consumerParams = {
-              producerId: thisClientProducer.id,
+              producerId: thisProducer.id,
               id: thisClientConsumer.id,
               kind: thisClientConsumer.kind,
               rtpParameters: thisClientConsumer.rtpParameters,
