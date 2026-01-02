@@ -27,11 +27,11 @@ async function main(): Promise<void> {
     console.debug('🚀 Conference Server Started!')
     console.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.debug('🔌 Server port:', env.EXPRESS_PORT)
-    console.debug(`📡 Server URL: ${link(env.SERVER_URL)}`)
+    console.debug(`📡 Server URL:   ${link(env.SERVER_URL)}`)
     console.debug(`🌐 Network Access:`)
     env.ALL_IPS.forEach((ip) => {
       if (ip !== 'localhost' && ip !== '127.0.0.1') {
-        console.debug(`   ${link(`https://${ip}:${env.EXPRESS_PORT}`)}`)
+        console.debug(`                 ${link(`https://${ip}:${env.EXPRESS_PORT}`)}`)
       }
     })
     console.debug(`💻 Local Access: ${link(`https://localhost:${env.EXPRESS_PORT}`)}`)
