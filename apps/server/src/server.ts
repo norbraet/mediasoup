@@ -181,6 +181,17 @@ async function main(): Promise<void> {
       if (thisClientConsumer === null) return
       await thisClientConsumer.resume()
     })
+
+    socket.on('close-all', (acknowledgement: (message: string) => void) => {
+      try {
+        thisClientConsumerTransport?.close()
+        thisClientProducerTransport?.close()
+        acknowledgement('closed')
+      } catch (error) {
+        console.log(error)
+        acknowledgement('closeError')
+      }
+    })
   })
 }
 

@@ -224,8 +224,12 @@
     }
   }
 
-  const disconnect = () => {
+  const disconnect = async () => {
     if (!socket) return
+
+    await socket.emitWithAck('close-all')
+    producerTransport.close()
+    consumerTransport.close()
 
     socket.disconnect()
     socket = null
