@@ -22,23 +22,19 @@ async function main(): Promise<void> {
   }
 
   const httpsServer = createServer(options, app).listen(env.EXPRESS_PORT, () => {
-    console.log('🚀 Conference Server Started!')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`📡 Server URL: ${env.SERVER_URL}`)
-    console.log(`🌐 Network Access:`)
+    const link = (url: string): string => `\x1b[36m${url}\x1b[0m`
+
+    console.debug('🚀 Conference Server Started!')
+    console.debug('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.debug('🔌 Server port:', env.EXPRESS_PORT)
+    console.debug(`📡 Server URL: ${link(env.SERVER_URL)}`)
+    console.debug(`🌐 Network Access:`)
     env.ALL_IPS.forEach((ip) => {
       if (ip !== 'localhost' && ip !== '127.0.0.1') {
-        console.log(`   https://${ip}:${env.EXPRESS_PORT}`)
+        console.debug(`   ${link(`https://${ip}:${env.EXPRESS_PORT}`)}`)
       }
     })
-    console.log(`💻 Local Access: https://localhost:${env.EXPRESS_PORT}`)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`📱 Client should be accessible at:`)
-    env.ALL_IPS.forEach((ip) => {
-      if (ip !== 'localhost' && ip !== '127.0.0.1') {
-        console.log(`   https://${ip}:${env.CLIENT_PORT}`)
-      }
-    })
+    console.debug(`💻 Local Access: ${link(`https://localhost:${env.EXPRESS_PORT}`)}`)
   })
 
   const io = new SocketIOServer(httpsServer, {
@@ -48,8 +44,6 @@ async function main(): Promise<void> {
     },
   })
   let thisProducer: types.Producer | null = null // The producer will be a global and whoever produced last
-
-  console.debug('Server is running on port:', env.EXPRESS_PORT)
 
   const router = await initMediasoup()
 
