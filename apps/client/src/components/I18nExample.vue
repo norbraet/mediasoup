@@ -5,7 +5,8 @@
   import { useI18n } from 'vue-i18n'
   import type { MessageSchema } from '../i18n/types'
 
-  const { getCurrentLocale, getAvailableLocales } = useTypedI18n()
+  const { t, getCurrentLocale, getAvailableLocales, getStoredLocale, clearStoredLocale } =
+    useTypedI18n()
   const { messages } = useI18n()
 
   const currentLocale = ref(getCurrentLocale())
@@ -59,6 +60,12 @@
     currentLocale.value = getCurrentLocale()
   }
 
+  // Handle clearing stored locale
+  const handleClearLocale = () => {
+    clearStoredLocale()
+    updateCurrentLocale()
+  }
+
   // Watch for locale changes (simple polling approach)
   setInterval(updateCurrentLocale, 100)
 </script>
@@ -76,7 +83,13 @@
     </div>
 
     <div class="live-demo">
-      <p class="demo-instruction">👆 Switch languages above to see real-time changes!</p>
+      <h2>🔄 Live Translation Demo</h2>
+      <p>
+        Current translation for <code>room.title</code>: <strong>"{{ t('room.title') }}"</strong>
+      </p>
+      <p class="demo-instruction">
+        👆 Switch languages above to see real-time changes! Your choice is saved to localStorage.
+      </p>
     </div>
     <div class="stats">
       <div class="stat">
@@ -86,6 +99,15 @@
       <div class="stat">
         <span class="label">Translation Keys:</span>
         <span class="value">{{ allKeys.length }}</span>
+      </div>
+      <div class="stat">
+        <span class="label">Stored in localStorage:</span>
+        <span class="value">
+          {{ getStoredLocale() || 'None' }}
+          <button v-if="getStoredLocale()" class="clear-btn" @click="handleClearLocale">
+            Clear
+          </button>
+        </span>
       </div>
     </div>
 
@@ -126,7 +148,7 @@
 <style scoped>
   .i18n-example {
     padding: 2rem;
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
@@ -182,6 +204,24 @@
     font-size: 1.125rem;
     color: #2d3748;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .clear-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    background: #e53e3e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .clear-btn:hover {
+    background: #c53030;
   }
 
   .translations-table {

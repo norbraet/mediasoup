@@ -1,10 +1,12 @@
 <script setup lang="ts">
   import { useTypedI18n } from '../composables/useI18n'
   import type { AvailableLocale } from '../i18n/types'
+  import { computed } from 'vue'
 
-  const { getCurrentLocale, setLocale, getAvailableLocales } = useTypedI18n()
+  const { setLocale, getAvailableLocales, locale } = useTypedI18n()
 
-  const currentLocale = getCurrentLocale()
+  // Use the reactive locale directly from i18n - this will sync across all instances
+  const currentLocale = computed(() => locale.value as AvailableLocale)
   const availableLocales = getAvailableLocales()
 
   const handleLanguageChange = (event: Event) => {
@@ -21,16 +23,24 @@
 </script>
 
 <template>
-  <div class="language-switcher">
-    <select :value="currentLocale" class="language-select" @change="handleLanguageChange">
+  <nav class="language-switcher">
+    <select
+      :value="currentLocale"
+      class="language-select"
+      name="Language Selector"
+      @change="handleLanguageChange"
+    >
       <option v-for="locale in availableLocales" :key="locale" :value="locale">
         {{ languageNames[locale] }}
       </option>
     </select>
-  </div>
+  </nav>
 </template>
 
 <style scoped>
+  .header-inner > .language-switcher {
+    margin-left: auto;
+  }
   .language-switcher {
     display: inline-block;
   }
