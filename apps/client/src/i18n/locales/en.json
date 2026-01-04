@@ -1,24 +1,90 @@
 {
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "loading": "Loading…",
+    "error": "Something went wrong"
+  },
+
   "controls": {
     "audio": {
       "mute": "Mute microphone",
-      "unmute": "Unmute microphone"
+      "unmute": "Unmute microphone",
+      "muted": "Microphone muted"
     },
     "video": {
       "turnOn": "Turn on camera",
-      "turnOff": "Turn off camera"
+      "turnOff": "Turn off camera",
+      "cameraOff": "Camera is off"
     },
     "screenShare": {
       "start": "Present screen",
       "stop": "Stop presenting",
-      "stopLabel": "Stop"
+      "stopLabel": "Stop",
+      "selectSource": "Select what you want to share"
     },
     "recording": {
       "start": "Start recording",
-      "stop": "Stop recording"
+      "stop": "Stop recording",
+      "recording": "Recording in progress"
+    },
+    "leave": {
+      "label": "Leave room",
+      "confirmTitle": "Leave conference?",
+      "confirmMessage": "Are you sure you want to leave the conference room?"
     }
   },
+
   "room": {
-    "title": "Conference Room"
+    "title": "Conference Room",
+    "lobby": "Lobby",
+    "joining": "Joining room…",
+    "left": "You have left the room",
+    "participants": "{count} participants"
+  },
+
+  "participants": {
+    "you": "You",
+    "host": "Host",
+    "guest": "Guest",
+    "muteAll": "Mute all",
+    "remove": "Remove participant"
+  },
+
+  "chat": {
+    "title": "Chat",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "empty": "No messages yet"
+  },
+
+  "status": {
+    "connecting": "Connecting…",
+    "connected": "Connected",
+    "reconnecting": "Reconnecting…",
+    "disconnected": "Disconnected"
+  },
+
+  "permissions": {
+    "audioDenied": "Microphone access denied",
+    "videoDenied": "Camera access denied",
+    "screenDenied": "Screen sharing permission denied",
+    "instructions": "Please allow access in your browser settings."
+  },
+
+  "errors": {
+    "roomNotFound": "Room not found",
+    "roomFull": "The room is full",
+    "network": "Network error",
+    "unknown": "Unknown error occurred"
+  },
+
+  "accessibility": {
+    "muteButton": "Mute or unmute microphone",
+    "cameraButton": "Turn camera on or off",
+    "screenShareButton": "Start or stop screen sharing",
+    "leaveButton": "Leave conference room"
   }
 }

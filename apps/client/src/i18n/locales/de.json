@@ -1,24 +1,90 @@
 {
+  "common": {
+    "ok": "OK",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "save": "Speichern",
+    "loading": "Lädt…",
+    "error": "Etwas ist schiefgelaufen"
+  },
+
   "controls": {
     "audio": {
       "mute": "Mikrofon stummschalten",
-      "unmute": "Mikrofon einschalten"
+      "unmute": "Mikrofon einschalten",
+      "muted": "Mikrofon stummgeschaltet"
     },
     "video": {
       "turnOn": "Kamera einschalten",
-      "turnOff": "Kamera ausschalten"
+      "turnOff": "Kamera ausschalten",
+      "cameraOff": "Kamera ist ausgeschaltet"
     },
     "screenShare": {
       "start": "Bildschirm präsentieren",
       "stop": "Präsentation beenden",
-      "stopLabel": "Beenden"
+      "stopLabel": "Beenden",
+      "selectSource": "Wählen Sie aus, was Sie teilen möchten"
     },
     "recording": {
       "start": "Aufnahme starten",
-      "stop": "Aufnahme beenden"
+      "stop": "Aufnahme beenden",
+      "recording": "Aufnahme läuft"
+    },
+    "leave": {
+      "label": "Raum verlassen",
+      "confirmTitle": "Konferenz verlassen?",
+      "confirmMessage": "Möchten Sie den Konferenzraum wirklich verlassen?"
     }
   },
+
   "room": {
-    "title": "Konferenzraum"
+    "title": "Konferenzraum",
+    "lobby": "Warteraum",
+    "joining": "Raum wird betreten…",
+    "left": "Sie haben den Raum verlassen",
+    "participants": "{count} Teilnehmende"
+  },
+
+  "participants": {
+    "you": "Sie",
+    "host": "Moderator",
+    "guest": "Gast",
+    "muteAll": "Alle stummschalten",
+    "remove": "Teilnehmende entfernen"
+  },
+
+  "chat": {
+    "title": "Chat",
+    "placeholder": "Nachricht eingeben…",
+    "send": "Senden",
+    "empty": "Noch keine Nachrichten"
+  },
+
+  "status": {
+    "connecting": "Verbindung wird hergestellt…",
+    "connected": "Verbunden",
+    "reconnecting": "Verbindung wird erneut hergestellt…",
+    "disconnected": "Getrennt"
+  },
+
+  "permissions": {
+    "audioDenied": "Zugriff auf das Mikrofon verweigert",
+    "videoDenied": "Zugriff auf die Kamera verweigert",
+    "screenDenied": "Bildschirmfreigabe verweigert",
+    "instructions": "Bitte erlauben Sie den Zugriff in den Browser-Einstellungen."
+  },
+
+  "errors": {
+    "roomNotFound": "Raum nicht gefunden",
+    "roomFull": "Der Raum ist voll",
+    "network": "Netzwerkfehler",
+    "unknown": "Unbekannter Fehler ist aufgetreten"
+  },
+
+  "accessibility": {
+    "muteButton": "Mikrofon stumm- oder einschalten",
+    "cameraButton": "Kamera ein- oder ausschalten",
+    "screenShareButton": "Bildschirmfreigabe starten oder beenden",
+    "leaveButton": "Konferenzraum verlassen"
   }
 }

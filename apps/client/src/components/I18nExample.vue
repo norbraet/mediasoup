@@ -66,7 +66,7 @@
 <template>
   <div class="i18n-example">
     <div class="header">
-      <h1>🌍 i18n Translation Overview</h1>
+      <h1>i18n Translation Overview</h1>
       <div class="controls">
         <span class="current-locale"
           >Current: <strong>{{ currentLocale.toUpperCase() }}</strong></span
