@@ -27,7 +27,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.d.ts", "src/i18n/locales/**.json"],
   "exclude": ["dist"],
   "references": [
     {

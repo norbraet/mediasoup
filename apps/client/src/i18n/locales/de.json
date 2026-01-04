@@ -1,0 +1,24 @@
+{
+  "controls": {
+    "audio": {
+      "mute": "Mikrofon stummschalten",
+      "unmute": "Mikrofon einschalten"
+    },
+    "video": {
+      "turnOn": "Kamera einschalten",
+      "turnOff": "Kamera ausschalten"
+    },
+    "screenShare": {
+      "start": "Bildschirm präsentieren",
+      "stop": "Präsentation beenden",
+      "stopLabel": "Beenden"
+    },
+    "recording": {
+      "start": "Aufnahme starten",
+      "stop": "Aufnahme beenden"
+    }
+  },
+  "room": {
+    "title": "Konferenzraum"
+  }
+}

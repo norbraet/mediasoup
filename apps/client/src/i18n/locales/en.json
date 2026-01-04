@@ -1,0 +1,24 @@
+{
+  "controls": {
+    "audio": {
+      "mute": "Mute microphone",
+      "unmute": "Unmute microphone"
+    },
+    "video": {
+      "turnOn": "Turn on camera",
+      "turnOff": "Turn off camera"
+    },
+    "screenShare": {
+      "start": "Present screen",
+      "stop": "Stop presenting",
+      "stopLabel": "Stop"
+    },
+    "recording": {
+      "start": "Start recording",
+      "stop": "Stop recording"
+    }
+  },
+  "room": {
+    "title": "Conference Room"
+  }
+}
