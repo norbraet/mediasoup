@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import BaseMediaSoup from './components/BaseMediaSoup.vue'
+  /*   import BaseMediaSoup from './components/BaseMediaSoup.vue' */
+  /* import I18nExample from './components/I18nExample.vue' */
   import ConferenceRoom from './views/ConferenceRoom.vue'
-  import I18nExample from './components/I18nExample.vue'
   import LanguageSwitcher from './components/LanguageSwitcher.vue'
 </script>
 
@@ -12,9 +12,9 @@
     </div>
   </header>
   <main>
-    <BaseMediaSoup />
+    <!-- <BaseMediaSoup /> -->
     <ConferenceRoom room-name="Test Room" />
-    <I18nExample />
+    <!-- <I18nExample /> -->
   </main>
 </template>
 
@@ -23,7 +23,6 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: white;
     border-bottom: 1px solid #e5e7eb;
   }
 
