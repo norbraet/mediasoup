@@ -62,6 +62,61 @@
 
     --font-body: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     --radius: 0.5rem;
+
+    /* Light theme colors (default) */
+    --color-bg-primary: rgba(255, 255, 255, 0.95);
+    --color-bg-secondary: #f1f3f4;
+    --color-bg-secondary-hover: #e8eaed;
+    --color-text-primary: #3c4043;
+    --color-text-secondary: #5f6368;
+    --color-shadow-primary: rgba(60, 64, 67, 0.15);
+    --color-shadow-secondary: rgba(60, 64, 67, 0.3);
+    --color-border: rgba(218, 220, 224, 0.5);
+
+    /* Consistent accent colors */
+    --color-error: #ea4335;
+    --color-error-hover: #d93025;
+    --color-primary: #1a73e8;
+    --color-primary-hover: #1557b0;
+    --color-success: #34a853;
+    --color-warning: #fbbc04;
+  }
+
+  /* Dark theme */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg-primary: rgba(32, 33, 36, 0.95);
+      --color-bg-secondary: #3c4043;
+      --color-bg-secondary-hover: #5f6368;
+      --color-text-primary: #ffffff;
+      --color-text-secondary: #9aa0a6;
+      --color-shadow-primary: rgba(0, 0, 0, 0.15);
+      --color-shadow-secondary: rgba(0, 0, 0, 0.3);
+      --color-border: rgba(95, 99, 104, 0.3);
+    }
+  }
+
+  /* Manual theme overrides */
+  .theme-light {
+    --color-bg-primary: rgba(255, 255, 255, 0.95);
+    --color-bg-secondary: #f1f3f4;
+    --color-bg-secondary-hover: #e8eaed;
+    --color-text-primary: #3c4043;
+    --color-text-secondary: #5f6368;
+    --color-shadow-primary: rgba(60, 64, 67, 0.15);
+    --color-shadow-secondary: rgba(60, 64, 67, 0.3);
+    --color-border: rgba(218, 220, 224, 0.5);
+  }
+
+  .theme-dark {
+    --color-bg-primary: rgba(32, 33, 36, 0.95);
+    --color-bg-secondary: #3c4043;
+    --color-bg-secondary-hover: #5f6368;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #9aa0a6;
+    --color-shadow-primary: rgba(0, 0, 0, 0.15);
+    --color-shadow-secondary: rgba(0, 0, 0, 0.3);
+    --color-border: rgba(95, 99, 104, 0.3);
   }
 
   body {
