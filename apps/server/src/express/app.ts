@@ -7,7 +7,7 @@ export function createApp(): Express {
 
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: env.CORS_ORIGINS,
       credentials: true,
     })
   )
