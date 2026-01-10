@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import ConferenceControls from '../components/ConferenceControls.vue'
   import { useTypedI18n } from '../composables/useI18n'
 
   defineProps<{
@@ -11,6 +12,7 @@
 <template>
   <section>
     <h1>{{ t('room.title') }}: {{ roomName }}</h1>
+    <ConferenceControls />
   </section>
 </template>
 
