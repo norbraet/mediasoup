@@ -1,13 +1,12 @@
 import { Server as SocketIOServer } from 'socket.io'
 import { Server } from 'https'
-import type { ClientService, MediasoupService, RoomService } from '../types'
-import { createWebRTCHandlers } from './handlers/webrtcHandlers'
+import type { ClientService, RoomService } from '../types'
+// import { createWebRTCHandlers } from './handlers/webrtcHandlers'
 import env from '../config/env'
 import { createRoomHandlers } from './handlers/roomHandlers'
 
 export const initializeSocketIO = (
   httpsServer: Server,
-  mediasoupService: MediasoupService,
   roomService: RoomService,
   clientService: ClientService
 ): SocketIOServer => {
@@ -19,12 +18,13 @@ export const initializeSocketIO = (
   })
 
   io.on('connect', (socket) => {
-    const webrtcHandlers = createWebRTCHandlers(socket, mediasoupService)
+    // TODO: I need to update the webrtcHandler
+    // const webrtcHandlers = createWebRTCHandlers(socket, mediasoupService)
     const roomHandlers = createRoomHandlers(socket, roomService, clientService)
 
     // Combine all handlers
     const allHandlers = {
-      ...webrtcHandlers,
+      // ...webrtcHandlers,
       ...roomHandlers,
     }
 

@@ -2,10 +2,10 @@ import fs from 'fs'
 import { createServer } from 'https'
 import { createApp } from './express/app'
 import env from './config/env'
-import { createMediasoupService } from './services/mediasoupService'
 import { initializeSocketIO } from './socketio/socketManager'
 import { createRoomService } from './services/roomService'
 import { createClientService } from './services/clientService'
+import { createWorkerPoolService } from './services/workerPoolService'
 
 async function main(): Promise<void> {
   const app = createApp()
@@ -35,11 +35,12 @@ async function main(): Promise<void> {
     console.debug(`💻 Local Access: ${link(`https://localhost:${env.EXPRESS_PORT}`)}`)
   })
 
-  const mediasoupService = await createMediasoupService()
-  const roomService = createRoomService()
+  // const mediasoupService = await createMediasoupService()
+  const workerPool = await createWorkerPoolService()
+  const roomService = createRoomService(workerPool)
   const clientService = createClientService()
 
-  initializeSocketIO(httpsServer, mediasoupService, roomService, clientService)
+  initializeSocketIO(httpsServer, roomService, clientService)
 }
 
 try {

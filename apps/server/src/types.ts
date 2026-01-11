@@ -56,6 +56,7 @@ export interface Room {
   id: string
   name: string
   router: types.Router
+  worker: types.Worker
   clients: Map<string, Client>
   addClient: (client: Client) => void
   removeClient: (clientId: string) => void
@@ -70,6 +71,7 @@ export interface RoomService {
   getRoomById: (roomId: string) => Room | undefined
   removeRoom: (roomId: string) => void
   getAllRooms: () => Map<string, Room>
+  getRoomStats: () => Array<{ roomName: string; clientCount: number; workerPid: string }>
 }
 
 export type JoinRoomAck = (response: {
@@ -85,4 +87,11 @@ export type JoinRoomAck = (response: {
 
 export interface RoomHandlers {
   'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
+}
+
+export interface WorkerPoolService {
+  getWorkerForRoom(roomName: string): types.Worker
+  getAvailableWorker(): types.Worker
+  getAllWorkers(): types.Worker[]
+  getWorkerStats(): Array<{ workerId: string; roomCount: number }>
 }
