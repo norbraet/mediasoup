@@ -1,12 +1,28 @@
 <script setup lang="ts">
+  import { onMounted, onUnmounted } from 'vue'
   import ConferenceControls from '../components/ConferenceControls.vue'
   import { useTypedI18n } from '../composables/useI18n'
+  import { useConferenceRoom } from '../composables/useConferenceRoom'
 
-  defineProps<{
-    roomName?: string
+  const props = defineProps<{
+    roomName: string
   }>()
 
   const { t } = useTypedI18n()
+  const conference = useConferenceRoom()
+  const userName = 'Test User'
+
+  onMounted(async () => {
+    try {
+      await conference.joinRoom(userName, props.roomName)
+    } catch (error) {
+      console.error('Failed to join room:', error)
+    }
+  })
+
+  onUnmounted(() => {
+    conference.leaveRoom()
+  })
 </script>
 
 <template>
