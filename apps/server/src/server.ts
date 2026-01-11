@@ -4,6 +4,8 @@ import { createApp } from './express/app'
 import env from './config/env'
 import { createMediasoupService } from './services/mediasoupService'
 import { initializeSocketIO } from './socketio/socketManager'
+import { createRoomService } from './services/roomService'
+import { createClientService } from './services/clientService'
 
 async function main(): Promise<void> {
   const app = createApp()
@@ -34,7 +36,10 @@ async function main(): Promise<void> {
   })
 
   const mediasoupService = await createMediasoupService()
-  initializeSocketIO(httpsServer, mediasoupService)
+  const roomService = createRoomService()
+  const clientService = createClientService()
+
+  initializeSocketIO(httpsServer, mediasoupService, roomService, clientService)
 }
 
 try {

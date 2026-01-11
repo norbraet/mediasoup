@@ -1,12 +1,15 @@
 import { Server as SocketIOServer } from 'socket.io'
 import { Server } from 'https'
-import type { MediasoupService } from '../services/mediasoupService'
+import type { ClientService, MediasoupService, RoomService } from '../types'
 import { createWebRTCHandlers } from './handlers/webrtcHandlers'
 import env from '../config/env'
+import { createRoomHandlers } from './handlers/roomHandlers'
 
 export const initializeSocketIO = (
   httpsServer: Server,
-  mediasoupService: MediasoupService
+  mediasoupService: MediasoupService,
+  roomService: RoomService,
+  clientService: ClientService
 ): SocketIOServer => {
   const io = new SocketIOServer(httpsServer, {
     cors: {
@@ -16,10 +19,17 @@ export const initializeSocketIO = (
   })
 
   io.on('connect', (socket) => {
-    const handlers = createWebRTCHandlers(socket, mediasoupService)
+    const webrtcHandlers = createWebRTCHandlers(socket, mediasoupService)
+    const roomHandlers = createRoomHandlers(socket, roomService, clientService)
 
-    // Register Handlers
-    Object.entries(handlers).forEach(([event, handler]) => {
+    // Combine all handlers
+    const allHandlers = {
+      ...webrtcHandlers,
+      ...roomHandlers,
+    }
+
+    // Register all handlers
+    Object.entries(allHandlers).forEach(([event, handler]) => {
       socket.on(event, handler)
     })
   })
