@@ -1,5 +1,5 @@
 import { types } from 'mediasoup'
-import { ClientTransportParams } from './types'
+import { ClientTransportParams } from '../types'
 import env from '../config/env'
 
 export const createWebRtcTransport = async (
