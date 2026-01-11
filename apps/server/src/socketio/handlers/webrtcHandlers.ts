@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io'
 import { types } from 'mediasoup'
-import type { MediasoupService } from '../../services/mediasoupService'
+import type { MediasoupService } from '../../types'
 import { createClientSession, type ClientSession } from '../../mediasoup/clientSession'
 import type { ClientProducingParams, ClientTransportParams } from '../../types.ts'
 

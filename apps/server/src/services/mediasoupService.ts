@@ -2,18 +2,7 @@ import { types } from 'mediasoup'
 import { initMediasoup } from '../mediasoup/createMediasoup'
 import { createWebRtcTransport } from '../mediasoup/createWebRtcTransport'
 import { createProducerManager, type ProducerManager } from './producerManager'
-import { ClientTransportParams } from '../mediasoup/types'
-
-export interface MediasoupService {
-  getRouterRtpCapabilities(): types.RtpCapabilities
-  createWebRtcTransport(): Promise<{
-    transport: types.WebRtcTransport
-    clientTransportParams: ClientTransportParams
-  }>
-  addProducer(producer: types.Producer): void
-  getCurrentProducer(): types.Producer | null
-  canConsume(producerId: string, rtpCapabilities: types.RtpCapabilities): boolean
-}
+import { MediasoupService } from '../types'
 
 export async function createMediasoupService(): Promise<MediasoupService> {
   const router = await initMediasoup()
@@ -32,5 +21,7 @@ export async function createMediasoupService(): Promise<MediasoupService> {
 
     canConsume: (producerId: string, rtpCapabilities: types.RtpCapabilities) =>
       router.canConsume({ producerId, rtpCapabilities }),
+
+    getRouter: () => router,
   }
 }
