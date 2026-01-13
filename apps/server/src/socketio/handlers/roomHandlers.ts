@@ -1,5 +1,13 @@
 import { Socket } from 'socket.io'
-import { ClientService, JoinRoomAck, RoomHandlers, RoomService } from '../../types'
+import {
+  ClientService,
+  JoinRoomAck,
+  RequestTransportAck,
+  RoomHandlers,
+  RoomService,
+  RoleType,
+} from '../../types'
+import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 
 export function createRoomHandlers(
   socket: Socket,
@@ -8,6 +16,7 @@ export function createRoomHandlers(
 ): RoomHandlers {
   return {
     'join-room': handleJoinRoom(socket, roomService, clientService),
+    'request-transport': handleRequestTransport(socket, roomService, clientService),
   }
 }
 
@@ -68,6 +77,60 @@ const handleJoinRoom =
       acknowledgement({
         success: false,
         error: 'Failed to join room',
+      })
+    }
+  }
+
+const handleRequestTransport =
+  (socket: Socket, roomService: RoomService, clientService: ClientService) =>
+  async (data: { type: RoleType }, acknowledgement: RequestTransportAck): Promise<void> => {
+    try {
+      console.debug('📡 Transport request:', data.type, 'for socket:', socket.id)
+      const { type } = data
+      const client = clientService.getClientBySocketId(socket.id)
+
+      if (!client) {
+        console.debug('Client not found')
+        acknowledgement({ success: false, error: 'Client not found' })
+        return
+      }
+      if (!client?.roomId) {
+        console.debug('Client not in room')
+        acknowledgement({ success: false, error: 'Client not in room' })
+        return
+      }
+
+      const room = roomService.getRoomById(client.roomId as string)
+      if (!room) {
+        console.debug('Room not found')
+        acknowledgement({ success: false, error: 'Room not found' })
+        return
+      }
+
+      if (type === 'producer') {
+        console.debug('Creating producer transport for:', client.userName)
+        const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
+        client.setProducerTransport(transport)
+        console.debug('clientTransportParams', clientTransportParams)
+        acknowledgement({
+          success: true,
+          params: clientTransportParams,
+        })
+      } else if (type === 'consumer') {
+        console.debug('Creating consumer transport for:', client.userName)
+        const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
+        client.addConsumerTransport(transport)
+        console.debug('clientTransportParams', clientTransportParams)
+        acknowledgement({
+          success: true,
+          params: clientTransportParams,
+        })
+      }
+    } catch (error) {
+      console.error('request-transport error:', error)
+      acknowledgement({
+        success: false,
+        error: 'Failed to create transport',
       })
     }
   }

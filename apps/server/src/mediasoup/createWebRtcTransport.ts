@@ -16,7 +16,9 @@ export const createWebRtcTransport = async (
       { ip: '0.0.0.0', announcedIp: env.LOCAL_IP },
       { ip: '127.0.0.1', announcedIp: undefined },
     ],
+    initialAvailableOutgoingBitrate: env.MEDIASOUP_OUTGOING_BITRATE,
   })
+  await transport.setMaxIncomingBitrate(env.MEDIASOUP_INCOMING_BITRATE)
 
   const clientTransportParams: ClientTransportParams = {
     id: transport.id,
@@ -24,8 +26,6 @@ export const createWebRtcTransport = async (
     iceCandidates: transport.iceCandidates,
     dtlsParameters: transport.dtlsParameters,
   }
-
-  console.debug('clientTransportParams', clientTransportParams)
 
   return { transport, clientTransportParams }
 }

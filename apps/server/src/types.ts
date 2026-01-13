@@ -37,7 +37,7 @@ export interface Client {
   consumers: Map<string, types.Consumer>
   setRoomId: (roomId: string) => void
   setProducerTransport: (transport: types.WebRtcTransport) => void
-  addConsumerTransport: (transportId: string, transport: types.WebRtcTransport) => void
+  addConsumerTransport: (transport: types.WebRtcTransport) => void
   removeConsumerTransport: (transportId: string) => void
   addProducer: (producer: types.Producer) => void
   addConsumer: (consumer: types.Consumer) => void
@@ -85,8 +85,15 @@ export type JoinRoomAck = (response: {
   error?: string
 }) => void
 
+export type RequestTransportAck = (response: {
+  success: boolean
+  params?: ClientTransportParams
+  error?: string
+}) => void
+
 export interface RoomHandlers {
   'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
+  'request-transport': (data: { type: RoleType }, ack: RequestTransportAck) => Promise<void>
 }
 
 export interface WorkerPoolService {
@@ -95,3 +102,6 @@ export interface WorkerPoolService {
   getAllWorkers(): types.Worker[]
   getWorkerStats(): Array<{ workerId: string; roomCount: number }>
 }
+
+// TODO: This type should be a sharable type since the frontend relys on it
+export type RoleType = 'producer' | 'consumer'

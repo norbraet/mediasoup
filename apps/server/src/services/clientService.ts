@@ -14,19 +14,25 @@ function createClient(socket: Socket, userName: string): Client {
   return {
     socketId: socket.id,
     userName,
-    roomId,
-    producerTransport,
-    consumerTransports,
     producers,
     consumers,
+    get roomId(): string | null {
+      return roomId
+    },
+    get producerTransport(): types.WebRtcTransport | null {
+      return producerTransport
+    },
+    get consumerTransports(): Map<string, types.WebRtcTransport> {
+      return consumerTransports
+    },
     setRoomId: (newRoomId: string): void => {
       roomId = newRoomId
     },
     setProducerTransport: (transport: types.WebRtcTransport): void => {
       producerTransport = transport
     },
-    addConsumerTransport: (transportId: string, transport: types.WebRtcTransport): void => {
-      consumerTransports.set(transportId, transport)
+    addConsumerTransport: (transport: types.WebRtcTransport): void => {
+      consumerTransports.set(transport.id, transport)
     },
 
     removeConsumerTransport: (transportId: string): void => {
