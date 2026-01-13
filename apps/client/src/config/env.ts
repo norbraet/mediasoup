@@ -62,9 +62,9 @@ export const env = Object.freeze({
 
 // Development logging
 if (_env.data.VITE_DEBUG) {
-  console.log('🔧 Client Environment Configuration:')
-  console.log(`   Server IP: ${serverIP}`)
-  console.log(`   API URL: ${env.VITE_API_URL}`)
-  console.log(`   WebSocket URL: ${env.VITE_WS_URL}`)
-  console.log(`   Client Port: ${env.VITE_PORT}`)
+  console.debug('🔧 Client Environment Configuration:')
+  console.debug(`   Server IP: ${serverIP}`)
+  console.debug(`   API URL: ${env.VITE_API_URL}`)
+  console.debug(`   WebSocket URL: ${env.VITE_WS_URL}`)
+  console.debug(`   Client Port: ${env.VITE_PORT}`)
 }
