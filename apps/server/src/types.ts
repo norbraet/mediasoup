@@ -91,9 +91,29 @@ export type RequestTransportAck = (response: {
   error?: string
 }) => void
 
+export type ConnectTransportAck = (response: { success: boolean; error?: string }) => void
+
+export type StartProducingAck = (response: {
+  success: boolean
+  id?: string
+  error?: string
+}) => void
+
 export interface RoomHandlers {
   'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
   'request-transport': (data: { type: RoleType }, ack: RequestTransportAck) => Promise<void>
+  'connect-transport': (
+    data: { dtlsParameters: types.DtlsParameters; type: RoleType },
+    ack: ConnectTransportAck
+  ) => Promise<void>
+  'start-producing': (
+    parameters: {
+      kind: types.MediaKind
+      rtpParameters: types.RtpParameters
+      appData?: types.AppData
+    },
+    ack: StartProducingAck
+  ) => Promise<void>
 }
 
 export interface WorkerPoolService {

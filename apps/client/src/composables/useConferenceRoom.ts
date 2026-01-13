@@ -2,6 +2,7 @@ import { readonly, ref } from 'vue'
 import { useSocket } from './useSocket'
 import { type CurrentProducer, type RoomParticipant } from '../types/types'
 import { Device, types } from 'mediasoup-client'
+import type { Socket } from 'socket.io-client'
 
 export function useConferenceRoom() {
   const socket = useSocket()
@@ -26,6 +27,12 @@ export function useConferenceRoom() {
   const isGettingMedia = ref(false)
   const mediaError = ref<string | null>(null)
 
+  // Producer State
+  const producerTransport = ref<types.Transport<types.AppData> | null>(null)
+  const videoProducer = ref<types.Producer | null>(null)
+  const audioProducer = ref<types.Producer | null>(null)
+
+  // Room Management
   const joinRoom = async (userName: string, roomName: string) => {
     try {
       // 1. Connect to server if not connected
@@ -91,6 +98,7 @@ export function useConferenceRoom() {
     }
   }
 
+  // Media Managment
   const startVideo = async (): Promise<void> => {
     if (!device.value?.loaded) {
       throw new Error('Device not ready. Join room first.')
@@ -116,7 +124,7 @@ export function useConferenceRoom() {
       console.debug('Video track:', !!videoTrack)
       console.debug('Audio track:', !!audioTrack)
 
-      // TODO: Create producer transport and start producing
+      await startProducing()
     } catch (error) {
       console.error('Failed to get user media:', error)
       mediaError.value = error instanceof Error ? error.message : 'Failed to access camera/mic'
@@ -164,6 +172,89 @@ export function useConferenceRoom() {
       audioTrack.enabled = !audioTrack.enabled
       isAudioEnabled.value = audioTrack.enabled
       console.debug('Audio toggled:', isAudioEnabled.value)
+    }
+  }
+
+  // Producer Mangamengt
+  const startProducing = async (): Promise<void> => {
+    if (!localStream.value) return
+
+    try {
+      console.debug('Starting to produce media...')
+      if (!producerTransport.value) await createProducerTransport(socket.getSocket())
+
+      await createProducer(
+        localStream.value,
+        producerTransport.value as types.Transport<types.AppData>
+      )
+      console.debug('Successfully started producing')
+    } catch (error) {
+      console.error('Failed to start producing:', error)
+    }
+  }
+
+  const createProducerTransport = async (socket: Socket): Promise<void> => {
+    console.debug('Creating producer transport...')
+    //TODO: i should use a sharable type so the server knows what to expect
+    const producerTransportParams = await socket.emitWithAck('request-transport', {
+      type: 'producer',
+    })
+    console.debug(producerTransportParams)
+
+    if (!device.value) {
+      console.error('Missing device!')
+      return
+    }
+
+    const transport = device.value.createSendTransport(producerTransportParams.params)
+    producerTransport.value = transport
+    producerTransport.value.on('connect', async ({ dtlsParameters }, callback, errback) => {
+      // TODO: connectResp type should be a sharable type
+      const connectResp = await socket.emitWithAck('connect-transport', {
+        dtlsParameters,
+        type: 'producer',
+      })
+      if (connectResp.success) {
+        console.log('We are connected')
+        callback()
+      } else if (!connectResp.success) {
+        errback(connectResp.error ?? 'General Error in connect-transport')
+      }
+    })
+
+    producerTransport.value.on('produce', async (parameters, callback, errback) => {
+      // TODO: produceResp type should be a sharable type
+      const { kind, rtpParameters, appData } = parameters
+      const produceResp = await socket.emitWithAck('start-producing', {
+        kind,
+        rtpParameters,
+        appData,
+      })
+
+      if (!produceResp.success) {
+        errback(produceResp.error ?? 'General start-producing error')
+      } else if (produceResp.success) {
+        callback({ id: produceResp.id })
+      }
+    })
+    console.debug('videoProducer.value :>> ', videoProducer.value)
+    console.debug('audioProducer.value :>> ', audioProducer.value)
+  }
+
+  const createProducer = async (
+    localStream: MediaStream,
+    producerTransport: types.Transport<types.AppData>
+  ): Promise<void> => {
+    const videoTrack = localStream.getVideoTracks()[0]
+    const audioTrack = localStream.getAudioTracks()[0]
+
+    try {
+      videoProducer.value = await producerTransport.produce({ track: videoTrack })
+      console.debug('Produce running on video')
+      audioProducer.value = await producerTransport.produce({ track: audioTrack })
+      console.debug('Produce running on audio')
+    } catch (error) {
+      console.error('Error producing:', error)
     }
   }
 

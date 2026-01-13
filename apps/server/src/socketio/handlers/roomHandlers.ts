@@ -6,8 +6,11 @@ import {
   RoomHandlers,
   RoomService,
   RoleType,
+  ConnectTransportAck,
+  StartProducingAck,
 } from '../../types'
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
+import { types } from 'mediasoup'
 
 export function createRoomHandlers(
   socket: Socket,
@@ -17,6 +20,8 @@ export function createRoomHandlers(
   return {
     'join-room': handleJoinRoom(socket, roomService, clientService),
     'request-transport': handleRequestTransport(socket, roomService, clientService),
+    'connect-transport': handleConnectTransport(socket, clientService),
+    'start-producing': handleStartProducing(socket, roomService, clientService),
   }
 }
 
@@ -133,4 +138,79 @@ const handleRequestTransport =
         error: 'Failed to create transport',
       })
     }
+  }
+
+const handleConnectTransport =
+  (socket: Socket, clientService: ClientService) =>
+  async (
+    data: { dtlsParameters: types.DtlsParameters; type: RoleType },
+    acknowledgement: ConnectTransportAck
+  ): Promise<void> => {
+    try {
+      const { dtlsParameters, type } = data
+      const client = clientService.getClientBySocketId(socket.id)
+      if (!client) {
+        acknowledgement({ success: false, error: 'Client not found' })
+        return
+      }
+      const transport = client.producerTransport
+      if (!transport) {
+        acknowledgement({ success: false, error: 'Transport not found' })
+        return
+      }
+
+      console.debug(`Connecting transport for ${client.userName} and it is a ${type}`)
+      if (type === 'producer') {
+        await transport.connect({ dtlsParameters })
+        acknowledgement({ success: true })
+      } else if (type === 'consumer') {
+        // TODO:
+      }
+    } catch (error) {
+      console.error('connect-transport error:', error)
+      acknowledgement({ success: false, error: 'connect-transport Error' })
+    }
+  }
+
+const handleStartProducing =
+  (socket: Socket, roomService: RoomService, clientService: ClientService) =>
+  async (
+    parameters: {
+      kind: types.MediaKind
+      rtpParameters: types.RtpParameters
+      appData?: types.AppData
+    },
+    acknowledgement: StartProducingAck
+  ): Promise<void> => {
+    const client = clientService.getClientBySocketId(socket.id)
+    if (!client) {
+      console.debug('Client not found')
+      acknowledgement({ success: false, error: 'Client not found' })
+      return
+    }
+
+    const transport = client.producerTransport
+    if (!transport) {
+      console.debug('Transport not found')
+      acknowledgement({ success: false, error: 'Transport not found' })
+      return
+    }
+
+    console.debug(`${client.userName} starting to produce ${parameters.kind}`)
+    const producer = await transport.produce(parameters)
+    client.addProducer(producer)
+
+    /* if (client.roomId) {
+      const room = roomService.getRoomById(client.roomId)
+      if (room) {
+        socket.to(room.name).emit('producer-added', {
+          id: producer.id,
+          kind: producer.kind,
+          userId: client.socketId,
+          userName: client.userName,
+        })
+      }
+    } */
+
+    acknowledgement({ success: true, id: producer.id })
   }
