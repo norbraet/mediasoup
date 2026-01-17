@@ -117,6 +117,7 @@ export interface RoomHandlers {
     },
     ack: StartProducingAck
   ) => Promise<void>
+  'audio-muted': (data: { isAudioMuted: boolean }) => void
 }
 
 export interface WorkerPoolService {

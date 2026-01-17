@@ -22,6 +22,7 @@ export function createRoomHandlers(
     'request-transport': handleRequestTransport(socket, roomService, clientService),
     'connect-transport': handleConnectTransport(socket, clientService),
     'start-producing': handleStartProducing(socket, roomService, clientService),
+    'audio-muted': handleAudioMuted(socket, clientService, roomService),
   }
 }
 
@@ -220,6 +221,7 @@ const handleStartProducing =
       )
     }
 
+    // TODO: Notify others in the room about new producer
     /* socket.to(room.name).emit('producer-added', {
       id: producer.id,
       kind: producer.kind,
@@ -228,4 +230,62 @@ const handleStartProducing =
     }) */
 
     acknowledgement({ success: true, id: producer.id })
+  }
+
+const handleAudioMuted =
+  (socket: Socket, clientService: ClientService, roomService: RoomService) =>
+  (data: { isAudioMuted: boolean }): void => {
+    try {
+      console.debug('Audio mute change requested:', data.isAudioMuted, 'for socket:', socket.id)
+
+      const client = clientService.getClientBySocketId(socket.id)
+      if (!client) {
+        console.debug('Client not found for audio mute change')
+        return
+      }
+
+      if (!client.roomId) {
+        console.debug('Client not in room for audio mute change')
+        return
+      }
+
+      const room = roomService.getRoomById(client.roomId)
+
+      if (!room) {
+        console.debug('Room not found for audio mute change')
+        return
+      }
+
+      let audioProducer: types.Producer | null = null
+      for (const [, producer] of client.producers) {
+        if (producer.kind === 'audio') {
+          audioProducer = producer
+          break
+        }
+      }
+
+      if (!audioProducer) {
+        console.debug('No audio producer found for client:', client.userName)
+        return
+      }
+
+      if (data.isAudioMuted) {
+        audioProducer.pause()
+        console.debug(`Paused audio producer for ${client.userName}`)
+      } else {
+        audioProducer.resume()
+        console.debug(`Resumed audio producer for ${client.userName}`)
+      }
+
+      // TODO: Implement notification of other clients in the room about the mute state change
+      /* socket.to(room.name).emit('participant-audio-changed', {
+        userId: client.socketId,
+        userName: client.userName,
+        isAudioMuted: data.isAudioMuted,
+      }) */
+
+      console.debug(`Audio ${data.isAudioMuted ? 'muted' : 'unmuted'} for ${client.userName}`)
+    } catch (error) {
+      console.error('Error handling audio mute change:', error)
+    }
   }
