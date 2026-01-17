@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, onMounted, onUnmounted, watch } from 'vue'
+  import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
   import ConferenceControls from '../components/ConferenceControls.vue'
   import { useTypedI18n } from '../composables/useI18n'
   import { useConferenceRoom } from '../composables/useConferenceRoom'
@@ -12,6 +12,9 @@
   const conference = useConferenceRoom()
   const userName = 'Test User'
   const localVideoRef = ref<HTMLVideoElement>()
+  const isActuallyMuted = computed(
+    () => !conference.isAudioEnabled.value || conference.isAudioMuted.value
+  )
 
   watch(
     localVideoRef,
@@ -36,7 +39,11 @@
   }
 
   const handleToggleAudio = () => {
-    conference.toggleAudio()
+    try {
+      conference.toggleAudio()
+    } catch (error) {
+      console.error('Failed to toggle audio:', error)
+    }
   }
 
   onMounted(async () => {
@@ -67,7 +74,7 @@
     <footer class="room-controls">
       <ConferenceControls
         v-if="conference.currentRoom && !conference.joinError.value"
-        :is-muted="!conference.isAudioEnabled"
+        :is-muted="isActuallyMuted"
         :is-video-off="!conference.isVideoEnabled"
         @toggle-video="handleToggleVideo"
         @toggle-audio="handleToggleAudio"

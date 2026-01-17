@@ -11,7 +11,7 @@
   }>()
 
   const emit = defineEmits<{
-    'toggle-audio': [isNowMuted: boolean]
+    'toggle-audio': []
     'toggle-video': [isNowVideoOff: boolean]
     'toggle-screen-share': [isNowPresenting: boolean]
     'toggle-recording': [isNowRecording: boolean]
@@ -61,8 +61,7 @@
 
   // Click handlers
   const handleToggleAudio = () => {
-    localMuted.value = !localMuted.value
-    emit('toggle-audio', localMuted.value)
+    emit('toggle-audio')
   }
 
   const handleToggleVideo = () => {

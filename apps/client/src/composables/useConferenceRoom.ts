@@ -24,6 +24,7 @@ export function useConferenceRoom() {
   const localVideoRef = ref<HTMLVideoElement>()
   const isVideoEnabled = ref(false)
   const isAudioEnabled = ref(false)
+  const isAudioMuted = ref(false)
   const isGettingMedia = ref(false)
   const mediaError = ref<string | null>(null)
 
@@ -93,6 +94,7 @@ export function useConferenceRoom() {
       currentProducers.value = []
       participants.value.clear()
       joinError.value = null
+      isAudioMuted.value = false
 
       console.debug('Left room and cleaned up device')
     }
@@ -119,6 +121,7 @@ export function useConferenceRoom() {
 
       isVideoEnabled.value = videoTrack?.enabled || false
       isAudioEnabled.value = audioTrack?.enabled || false
+      isAudioMuted.value = false
 
       console.debug('Got user media successfully')
       console.debug('Video track:', !!videoTrack)
@@ -165,6 +168,30 @@ export function useConferenceRoom() {
   }
 
   const toggleAudio = (): void => {
+    if (!audioProducer.value) {
+      console.debug('No audio producer available, toggling track instead')
+      toggleAudioTrack()
+      return
+    }
+
+    try {
+      if (isAudioMuted.value) {
+        audioProducer.value.resume()
+        isAudioMuted.value = false
+      } else {
+        audioProducer.value.pause()
+        isAudioMuted.value = true
+      }
+      socket.getSocket().emit('audio-muted', { isAudioMuted: isAudioMuted.value })
+      console.debug('Is audio producer producing:', isAudioMuted.value)
+    } catch (error) {
+      console.error('Failed to toggle audio producer. Fallback to track-level toggle:', error)
+      toggleAudioTrack()
+    }
+  }
+
+  // Fallback method for when producer is not available
+  const toggleAudioTrack = (): void => {
     if (!localStream.value) return
 
     const audioTrack = localStream.value.getAudioTracks()[0]
@@ -249,10 +276,25 @@ export function useConferenceRoom() {
     const audioTrack = localStream.getAudioTracks()[0]
 
     try {
-      videoProducer.value = await producerTransport.produce({ track: videoTrack })
-      console.debug('Produce running on video')
-      audioProducer.value = await producerTransport.produce({ track: audioTrack })
-      console.debug('Produce running on audio')
+      if (videoTrack) {
+        videoProducer.value = await producerTransport.produce({ track: videoTrack })
+        console.debug('Video producer created')
+      }
+      if (audioTrack) {
+        audioProducer.value = await producerTransport.produce({ track: audioTrack })
+        console.debug('Audio producer created')
+
+        // TODO: Check if this is needed since i already handle the ref toggle
+        audioProducer.value.on('@pause', () => {
+          isAudioMuted.value = true
+          console.debug('Audio producer paused')
+        })
+
+        audioProducer.value.on('@resume', () => {
+          isAudioMuted.value = false
+          console.debug('Audio producer resumed')
+        })
+      }
     } catch (error) {
       console.error('Error producing:', error)
     }
@@ -281,6 +323,7 @@ export function useConferenceRoom() {
     localVideoRef,
     isVideoEnabled: readonly(isVideoEnabled),
     isAudioEnabled: readonly(isAudioEnabled),
+    isAudioMuted: readonly(isAudioMuted),
     isGettingMedia: readonly(isGettingMedia),
     mediaError: readonly(mediaError),
 
