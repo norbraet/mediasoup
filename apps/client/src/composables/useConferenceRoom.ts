@@ -3,6 +3,7 @@ import { useSocket } from './useSocket'
 import { type CurrentProducer, type RoomParticipant } from '../types/types'
 import { Device, types } from 'mediasoup-client'
 import type { Socket } from 'socket.io-client'
+import { env } from '../config/env'
 
 export function useConferenceRoom() {
   const socket = useSocket()
@@ -266,6 +267,26 @@ export function useConferenceRoom() {
     })
     console.debug('videoProducer.value :>> ', videoProducer.value)
     console.debug('audioProducer.value :>> ', audioProducer.value)
+
+    if (env.VITE_DEBUG) {
+      setInterval(async () => {
+        if (!producerTransport.value) return
+        console.groupCollapsed('RTC Statistics')
+        const stats = await producerTransport.value.getStats()
+        for (const report of stats.values()) {
+          if (report.type === 'outbound-rtp') {
+            console.group('outbound-rtp')
+            console.debug(report)
+            console.debug('bytesSent:', report.bytesSent)
+            console.debug('packetsSent:', report.packetsSent)
+            console.groupEnd()
+          } else {
+            console.debug(report)
+          }
+        }
+        console.groupEnd()
+      }, 1000)
+    }
   }
 
   const createProducer = async (
