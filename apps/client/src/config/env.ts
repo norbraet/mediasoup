@@ -28,7 +28,10 @@ const envSchema = z.object({
   VITE_WS_PROTOCOL: z
     .enum(['ws', 'wss'], { message: 'VITE_WS_PROTOCOL must be ws or wss' })
     .default('wss'),
-  VITE_DEBUG: z.coerce.boolean().default(false),
+  VITE_DEBUG: z.coerce
+    .string()
+    .default('false')
+    .transform((val) => val === 'true'),
   VITE_APP_NAME: z
     .string()
     .min(1, { message: 'VITE_APP_NAME cannot be empty' })
