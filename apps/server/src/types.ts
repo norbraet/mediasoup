@@ -58,10 +58,13 @@ export interface Room {
   router: types.Router
   worker: types.Worker
   clients: Map<string, Client>
+  activeSpeakerObserver: types.ActiveSpeakerObserver
   addClient: (client: Client) => void
   removeClient: (clientId: string) => void
   getProducers: () => types.Producer[]
   getClientCount: () => number
+  getActiveSpeaker: () => string | undefined
+  addProducerToActiveSpeaker: (producer: types.Producer) => void
   cleanup: () => void
 }
 

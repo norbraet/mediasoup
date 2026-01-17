@@ -196,21 +196,36 @@ const handleStartProducing =
       return
     }
 
+    if (!client.roomId) {
+      console.debug('Client not in room')
+      acknowledgement({ success: false, error: 'Client not in room' })
+      return
+    }
+
+    const room = roomService.getRoomById(client.roomId)
+    if (!room) {
+      console.debug('Room not found')
+      acknowledgement({ success: false, error: 'Room not found' })
+      return
+    }
+
     console.debug(`${client.userName} starting to produce ${parameters.kind}`)
     const producer = await transport.produce(parameters)
     client.addProducer(producer)
 
-    /* if (client.roomId) {
-      const room = roomService.getRoomById(client.roomId)
-      if (room) {
-        socket.to(room.name).emit('producer-added', {
-          id: producer.id,
-          kind: producer.kind,
-          userId: client.socketId,
-          userName: client.userName,
-        })
-      }
-    } */
+    if (parameters.kind === 'audio') {
+      room.addProducerToActiveSpeaker(producer)
+      console.debug(
+        `Added audio producer ${producer.id} to active speaker observer for ${client.userName}`
+      )
+    }
+
+    /* socket.to(room.name).emit('producer-added', {
+      id: producer.id,
+      kind: producer.kind,
+      userId: client.socketId,
+      userName: client.userName,
+    }) */
 
     acknowledgement({ success: true, id: producer.id })
   }
