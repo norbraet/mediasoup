@@ -9,6 +9,8 @@ import {
   ConnectTransportAck,
   StartProducingAck,
   RecentSpeakerData,
+  ConsumeMediaAck,
+  ClientConsumeMediaParams,
 } from '../../types'
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 import { types } from 'mediasoup'
@@ -25,6 +27,7 @@ export function createRoomHandlers(
     'connect-transport': handleConnectTransport(socket, clientService),
     'start-producing': handleStartProducing(socket, roomService, clientService),
     'audio-muted': handleAudioMuted(socket, clientService, roomService),
+    'consume-media': handleConsumeMedia(socket, clientService, roomService),
   }
 }
 
@@ -206,14 +209,6 @@ const handleRequestTransport =
           success: true,
           params: clientTransportParams,
         })
-
-        /* const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
-        client.addConsumerTransport(transport)
-        console.debug('clientTransportParams', clientTransportParams)
-        acknowledgement({
-          success: true,
-          params: clientTransportParams,
-        }) */
       }
     } catch (error) {
       console.error('request-transport error:', error)
@@ -370,5 +365,81 @@ const handleAudioMuted =
       console.debug(`Audio ${data.isAudioMuted ? 'muted' : 'unmuted'} for ${client.userName}`)
     } catch (error) {
       console.error('Error handling audio mute change:', error)
+    }
+  }
+
+const handleConsumeMedia =
+  (socket: Socket, clientService: ClientService, roomService: RoomService) =>
+  async (
+    data: {
+      rtpCapabilities: types.RtpCapabilities
+      producerId: string
+      kind: types.MediaKind
+    },
+    acknowledgement: ConsumeMediaAck
+  ): Promise<void> => {
+    const { rtpCapabilities, producerId, kind } = data
+    try {
+      const client = clientService.getClientBySocketId(socket.id)
+      if (!client) {
+        console.debug('Client not found for consume media')
+        acknowledgement({ success: false, error: 'Client not found' })
+        return
+      }
+      if (!client?.roomId) {
+        console.debug('Client not in room')
+        acknowledgement({ success: false, error: 'Client not in room' })
+        return
+      }
+
+      const room = roomService.getRoomById(client.roomId)
+      if (!room) {
+        console.debug('Room not found')
+        acknowledgement({ success: false, error: 'Room not found' })
+        return
+      }
+
+      if (!room.router.canConsume({ producerId, rtpCapabilities })) {
+        console.debug('Cannot consume')
+        acknowledgement({ success: false, error: 'Cannot consume' })
+        return
+      }
+      // TODO: I might need to check if the producer even exists. It is possible that the producer gets dropped or exits the room
+
+      let targetTransport = null
+      for (const [, transportData] of client.consumerTransports) {
+        if (transportData.associatedAudioProducerId === producerId) {
+          targetTransport = transportData.transport
+          break
+        } else if (transportData.associatedVideoProducerId === producerId) {
+          targetTransport = transportData.transport
+        }
+      }
+
+      if (!targetTransport) {
+        console.debug('Target Transport not found')
+        acknowledgement({ success: false, error: 'Target Transport not found' })
+        return
+      }
+
+      const newConsumer = await targetTransport.consume({
+        producerId,
+        rtpCapabilities,
+        paused: true,
+      })
+
+      client.addConsumer(newConsumer, kind, targetTransport)
+
+      const clientParams: ClientConsumeMediaParams = {
+        producerId: producerId,
+        id: newConsumer.id,
+        kind: newConsumer.kind,
+        rtpParameters: newConsumer.rtpParameters,
+      }
+
+      acknowledgement({ success: true, params: clientParams })
+    } catch (error) {
+      console.error(error)
+      acknowledgement({ success: false, error: 'Consume Media failed' })
     }
   }

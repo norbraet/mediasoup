@@ -16,6 +16,13 @@ export type ClientTransportParams =
     }
   | { error: string }
 
+export type ClientConsumeMediaParams = {
+  producerId: string
+  id: string
+  kind: types.MediaKind
+  rtpParameters: types.RtpParameters
+}
+
 export interface MediasoupService {
   getRouterRtpCapabilities(): types.RtpCapabilities
   createWebRtcTransport(): Promise<{
@@ -32,6 +39,8 @@ export type ConsumerTransport = {
   transport: WebRtcTransport
   associatedAudioProducerId: string
   associatedVideoProducerId: string | null
+  audio?: types.Consumer
+  video?: types.Consumer
 }
 
 export interface Client {
@@ -41,7 +50,6 @@ export interface Client {
   producerTransport: types.WebRtcTransport | null
   consumerTransports: Map<string, ConsumerTransport>
   producers: Map<string, types.Producer>
-  consumers: Map<string, types.Consumer>
   setRoomId: (roomId: string) => void
   setProducerTransport: (transport: types.WebRtcTransport) => void
   addConsumerTransport: (
@@ -51,7 +59,11 @@ export interface Client {
   ) => void
   removeConsumerTransport: (transportId: string) => void
   addProducer: (producer: types.Producer) => void
-  addConsumer: (consumer: types.Consumer) => void
+  addConsumer: (
+    consumer: types.Consumer,
+    kind: types.MediaKind,
+    transport: types.WebRtcTransport
+  ) => void
   cleanup: () => void
 }
 
@@ -127,6 +139,11 @@ export type StartConsumingAck = (response: {
 
 export type ResumeConsumerAck = (response: { success: boolean; error?: string }) => void
 
+export type ConsumeMediaAck = (response: {
+  success: boolean
+  error?: string
+  params?: ClientConsumeMediaParams
+}) => void
 export interface RoomHandlers {
   'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
   'request-transport': (
@@ -146,6 +163,11 @@ export interface RoomHandlers {
     ack: StartProducingAck
   ) => Promise<void>
   'audio-muted': (data: { isAudioMuted: boolean }) => void
+  'consume-media': (
+    data: { rtpCapabilities: types.RtpCapabilities; producerId: string; kind: types.MediaKind },
+    acknowledgement: ConsumeMediaAck
+  ) => Promise<void>
+
   /* 'start-consuming': (
     data: { producerId: string; rtpCapabilities: types.RtpCapabilities },
     ack: StartConsumingAck

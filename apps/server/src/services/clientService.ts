@@ -5,18 +5,14 @@ import env from '../config/env'
 
 function createClient(socket: Socket, userName: string): Client {
   const producers = new Map<string, types.Producer>() // The client will only have audio or video. I may consider to have an object of { audio?: ..., video?: ... } instead
-  const consumers = new Map<string, types.Consumer>() // The client may consume 10 different feeds each of them with an audio and/or video track, so i need an array or a map
   const consumerTransports = new Map<string, ConsumerTransport>() // This is our downstream transport
+  let producerTransport: types.WebRtcTransport | null = null // This is the upstream transport
   let roomId: string | null = null
-
-  // This is the upstream transport
-  let producerTransport: types.WebRtcTransport | null = null
 
   return {
     socketId: socket.id,
     userName,
     producers,
-    consumers,
     get roomId(): string | null {
       return roomId
     },
@@ -73,15 +69,25 @@ function createClient(socket: Socket, userName: string): Client {
     addProducer: (producer: types.Producer): void => {
       producers.set(producer.id, producer)
     },
-    addConsumer: (consumer: types.Consumer): void => {
-      consumers.set(consumer.id, consumer)
+    addConsumer: (
+      consumer: types.Consumer,
+      kind: types.MediaKind,
+      transport: types.WebRtcTransport
+    ): void => {
+      for (const [, transportData] of consumerTransports) {
+        if (transportData.transport.id === transport.id) {
+          transportData[kind] = consumer
+          break
+        }
+      }
+
+      console.debug(`Added ${kind} consumer ${consumer.id}`)
     },
     cleanup: (): void => {
       producerTransport?.close()
       consumerTransports.forEach((consumerTransport) => consumerTransport.transport.close())
       consumerTransports.clear()
       producers.clear()
-      consumers.clear()
       roomId = null
     },
   }
