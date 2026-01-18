@@ -36,6 +36,7 @@ export function useConferenceRoom(): UseConferenceRoom {
 
   // Room Management
   const joinRoom = async (userName: string, roomName: string) => {
+    console.groupCollapsed('join-room')
     try {
       // 1. Connect to server if not connected
       if (!socket.isConnected.value) {
@@ -89,6 +90,7 @@ export function useConferenceRoom(): UseConferenceRoom {
       throw error
     } finally {
       isJoining.value = false
+      console.groupEnd()
     }
   }
 
@@ -122,7 +124,7 @@ export function useConferenceRoom(): UseConferenceRoom {
     mediaError.value = null
 
     try {
-      console.debug('Getting user media...')
+      console.groupCollapsed('Getting user media...')
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       localStream.value = stream
       if (localVideoRef.value) localVideoRef.value.srcObject = stream
@@ -146,6 +148,7 @@ export function useConferenceRoom(): UseConferenceRoom {
       throw error
     } finally {
       isGettingMedia.value = false
+      console.groupEnd()
     }
   }
 
