@@ -155,7 +155,7 @@ const handleRequestTransport =
         console.debug('Creating producer transport for:', client.userName)
         const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
         client.setProducerTransport(transport)
-        console.debug('clientTransportParams', clientTransportParams)
+        console.debug('Consumer transport clientTransportParams:', clientTransportParams)
         acknowledgement({
           success: true,
           params: clientTransportParams,
@@ -222,28 +222,55 @@ const handleRequestTransport =
 const handleConnectTransport =
   (socket: Socket, clientService: ClientService) =>
   async (
-    data: { dtlsParameters: types.DtlsParameters; type: RoleType },
+    data: { dtlsParameters: types.DtlsParameters; type: RoleType; audioProducerId?: string },
     acknowledgement: ConnectTransportAck
   ): Promise<void> => {
     try {
-      const { dtlsParameters, type } = data
+      const { dtlsParameters, type, audioProducerId } = data
       const client = clientService.getClientBySocketId(socket.id)
       if (!client) {
         acknowledgement({ success: false, error: 'Client not found' })
         return
       }
-      const transport = client.producerTransport
-      if (!transport) {
-        acknowledgement({ success: false, error: 'Transport not found' })
-        return
-      }
 
       console.debug(`Connecting transport for ${client.userName} and it is a ${type}`)
+
       if (type === 'producer') {
+        const transport = client.producerTransport
+        if (!transport) {
+          acknowledgement({ success: false, error: 'Producer transport not found' })
+          return
+        }
         await transport.connect({ dtlsParameters })
         acknowledgement({ success: true })
       } else if (type === 'consumer') {
-        // TODO:
+        if (!audioProducerId) {
+          acknowledgement({
+            success: false,
+            error: 'Audio producer ID required for consumer transport',
+          })
+          return
+        }
+
+        let targetTransport: types.WebRtcTransport | null = null
+        for (const [, transportData] of client.consumerTransports) {
+          if (transportData.associatedAudioProducerId === audioProducerId) {
+            targetTransport = transportData.transport
+            break
+          }
+        }
+
+        if (!targetTransport) {
+          console.debug('Consumer transport not found for audioProducerId:', audioProducerId)
+          acknowledgement({
+            success: false,
+            error: 'Consumer transport not found for the given audioProducerId',
+          })
+          return
+        }
+
+        await targetTransport.connect({ dtlsParameters })
+        acknowledgement({ success: true })
       }
     } catch (error) {
       console.error('connect-transport error:', error)

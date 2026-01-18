@@ -68,7 +68,7 @@ export function useConferenceRoom(): UseConferenceRoom {
       currentRoom.value = roomName
       currentProducers.value = resp.producers || []
 
-      requestTransportToConsume(
+      await requestTransportToConsume(
         resp.recentSpeakersData,
         socket.getSocket(),
         device.value as types.Device
@@ -335,7 +335,7 @@ export function useConferenceRoom(): UseConferenceRoom {
     }
   }
 
-  const requestTransportToConsume = (
+  const requestTransportToConsume = async (
     recentSpeakersData: Array<{
       audioProducerId: string
       videoProducerId: string | null
@@ -351,39 +351,69 @@ export function useConferenceRoom(): UseConferenceRoom {
     console.debug('device :>> ', device)
     console.groupEnd()
 
-    recentSpeakersData.forEach(async (speaker, index) => {
-      // TODO: consumerTransportParams needs to use a sharable type from the server
-      const consumerTransportParams: {
-        success: boolean
-        params: {
-          id: string
-          iceParameters: types.IceParameters
-          iceCandidates: types.IceCandidate[]
-          dtlsParameters: types.DtlsParameters
-        }
-        error?: string
-      } = await socket.emitWithAck('request-transport', {
-        type: 'consumer',
-        audioProducerId: speaker.audioProducerId,
-      })
-      console.log('consumerTransportParams :>> ', consumerTransportParams)
+    for (const [index, speaker] of recentSpeakersData.entries()) {
+      try {
+        console.log(`Creating consumer transport for ${speaker.userName}...`)
 
-      const consumerTransport = createConsumerTransport(
-        consumerTransportParams,
-        socket,
-        device,
-        speaker.audioProducerId
-      )
-      // TODO: the index here is only there to determine in what HTMLVideoElement the stream should go. maybe i find a way to do that based on the list of speakers
-      const [audioConsumer, videoConsumer] = await Promise.all([
-        createConsumer(consumerTransport, speaker.audioProducerId, device, socket, 'audio', index),
-        createConsumer(consumerTransport, speaker.videoProducerId, device, socket, 'video', index),
-      ])
-      console.groupCollapsed('recentSpeakersData')
-      console.debug('audioConsumer :>> ', audioConsumer)
-      console.debug('videoConsumer :>> ', videoConsumer)
-      console.groupEnd()
-    })
+        const consumerTransportParams = await socket.emitWithAck('request-transport', {
+          type: 'consumer',
+          audioProducerId: speaker.audioProducerId,
+        })
+
+        if (!consumerTransportParams || typeof consumerTransportParams !== 'object') {
+          console.error(`Invalid response type for ${speaker.userName}:`, consumerTransportParams)
+          continue
+        }
+
+        if (!consumerTransportParams.success) {
+          console.error(
+            `Failed to create consumer transport for ${speaker.userName}:`,
+            consumerTransportParams.error
+          )
+          continue
+        }
+
+        if (!consumerTransportParams.params) {
+          console.error(`No transport params received for ${speaker.userName}`)
+          continue
+        }
+
+        console.log(`Valid transport params received for ${speaker.userName}`)
+
+        const consumerTransport = createConsumerTransport(
+          consumerTransportParams,
+          socket,
+          device,
+          speaker.audioProducerId
+        )
+
+        // TODO: the index here is only there to determine in what HTMLVideoElement the stream should go. maybe i find a way to do that based on the list of speakers
+        const [audioConsumer, videoConsumer] = await Promise.all([
+          createConsumer(
+            consumerTransport,
+            speaker.audioProducerId,
+            device,
+            socket,
+            'audio',
+            index
+          ),
+          createConsumer(
+            consumerTransport,
+            speaker.videoProducerId,
+            device,
+            socket,
+            'video',
+            index
+          ),
+        ])
+        console.groupCollapsed('recentSpeakersData')
+        console.debug('audioConsumer :>> ', audioConsumer)
+        console.debug('videoConsumer :>> ', videoConsumer)
+        console.groupEnd()
+      } catch (error) {
+        console.error(`Error setting up consumer for ${speaker.userName}:`, error)
+      }
+    }
   }
 
   const createConsumer = async (
@@ -405,6 +435,19 @@ export function useConferenceRoom(): UseConferenceRoom {
     console.debug('index :>> ', index)
     console.groupEnd()
 
+    if (!consumerParams.success) {
+      console.error(consumerParams.error || 'Failed to get consumer params')
+      return
+    }
+
+    if (!consumerParams.params) {
+      console.error('Got no consumer params from the server')
+      return
+    }
+
+    const consumer = await consumerTransport.consume(consumerParams.params)
+    console.log('consume() has finished!', consumer)
+
     return consumerParams
   }
 
@@ -419,9 +462,9 @@ export function useConferenceRoom(): UseConferenceRoom {
       }
       error?: string
     },
-    _socket: Socket,
+    socket: Socket,
     device: types.Device | null,
-    _audioProducerId: string
+    audioProducerId: string
   ) => {
     if (!device) throw new Error('No device found to create Consumer Transport')
 
@@ -439,9 +482,19 @@ export function useConferenceRoom(): UseConferenceRoom {
       console.groupEnd()
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
       console.debug('Transport connect event has fired')
+      const connectResp = await socket.emitWithAck('connect-transport', {
+        dtlsParameters,
+        type: 'consumer',
+        audioProducerId,
+      })
+
+      if (connectResp.success) {
+        callback()
+      } else {
+        errback(connectResp.error || 'Error in connect consumer transport')
+      }
     })
 
     return consumerTransport

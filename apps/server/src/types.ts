@@ -151,7 +151,7 @@ export interface RoomHandlers {
     ack: RequestTransportAck
   ) => Promise<void>
   'connect-transport': (
-    data: { dtlsParameters: types.DtlsParameters; type: RoleType },
+    data: { dtlsParameters: types.DtlsParameters; type: RoleType; audioProducerId?: string },
     ack: ConnectTransportAck
   ) => Promise<void>
   'start-producing': (
