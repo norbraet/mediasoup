@@ -121,10 +121,13 @@ const handleJoinRoom =
 
 const handleRequestTransport =
   (socket: Socket, roomService: RoomService, clientService: ClientService) =>
-  async (data: { type: RoleType }, acknowledgement: RequestTransportAck): Promise<void> => {
+  async (
+    data: { type: RoleType; audioProducerId?: string },
+    acknowledgement: RequestTransportAck
+  ): Promise<void> => {
     try {
       console.debug('📡 Transport request:', data.type, 'for socket:', socket.id)
-      const { type } = data
+      const { type, audioProducerId } = data
       const client = clientService.getClientBySocketId(socket.id)
 
       if (!client) {
@@ -156,13 +159,61 @@ const handleRequestTransport =
         })
       } else if (type === 'consumer') {
         console.debug('Creating consumer transport for:', client.userName)
+        if (!audioProducerId) {
+          acknowledgement({ success: false, error: 'Audio producer ID required for consumer' })
+          return
+        }
+        const audioProducerClient = clientService.getClientByProducerId(audioProducerId)
+        if (!audioProducerClient) {
+          acknowledgement({ success: false, error: 'Audio producer not found' })
+          return
+        }
+
+        if (audioProducerClient.roomId !== client.roomId) {
+          acknowledgement({ success: false, error: 'Audio producer not in same room' })
+          return
+        }
+
+        const audioProducer = audioProducerClient.producers.get(audioProducerId)
+        if (!audioProducer || audioProducer.kind !== 'audio') {
+          acknowledgement({ success: false, error: 'Invalid audio producer' })
+          return
+        }
+
+        let videoProducerId: string | null = null
+        for (const [producerId, producer] of audioProducerClient.producers) {
+          if (producer.kind === 'video') {
+            videoProducerId = producerId
+            break
+          }
+        }
+
+        const recentSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
+        if (!recentSpeakers.includes(audioProducerClient.socketId)) {
+          acknowledgement({ success: false, error: 'Producer not in recent speakers' })
+          return
+        }
+
+        console.debug(`Found producer pair for ${audioProducerClient.userName}:`, {
+          audio: audioProducerId,
+          video: videoProducerId || 'none',
+        })
+
         const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
+        client.addConsumerTransport(transport, audioProducerId, videoProducerId)
+
+        acknowledgement({
+          success: true,
+          params: clientTransportParams,
+        })
+
+        /* const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
         client.addConsumerTransport(transport)
         console.debug('clientTransportParams', clientTransportParams)
         acknowledgement({
           success: true,
           params: clientTransportParams,
-        })
+        }) */
       }
     } catch (error) {
       console.error('request-transport error:', error)

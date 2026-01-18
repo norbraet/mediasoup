@@ -1,12 +1,12 @@
 import { types } from 'mediasoup'
-import { Client, ClientService } from '../types'
+import { Client, ClientService, ConsumerTransport } from '../types'
 import { Socket } from 'socket.io'
 import env from '../config/env'
 
 function createClient(socket: Socket, userName: string): Client {
   const producers = new Map<string, types.Producer>() // The client will only have audio or video. I may consider to have an object of { audio?: ..., video?: ... } instead
   const consumers = new Map<string, types.Consumer>() // The client may consume 10 different feeds each of them with an audio and/or video track, so i need an array or a map
-  const consumerTransports = new Map<string, types.WebRtcTransport>() // This is our downstream transport
+  const consumerTransports = new Map<string, ConsumerTransport>() // This is our downstream transport
   let roomId: string | null = null
 
   // This is the upstream transport
@@ -23,7 +23,7 @@ function createClient(socket: Socket, userName: string): Client {
     get producerTransport(): types.WebRtcTransport | null {
       return producerTransport
     },
-    get consumerTransports(): Map<string, types.WebRtcTransport> {
+    get consumerTransports(): Map<string, ConsumerTransport> {
       return consumerTransports
     },
     setRoomId: (newRoomId: string): void => {
@@ -47,14 +47,26 @@ function createClient(socket: Socket, userName: string): Client {
         }, 1000)
       }
     },
-    addConsumerTransport: (transport: types.WebRtcTransport): void => {
-      consumerTransports.set(transport.id, transport)
+    addConsumerTransport: (
+      transport: types.WebRtcTransport,
+      audioProducerId: string,
+      videoProducerId: string | null
+    ): void => {
+      consumerTransports.set(transport.id, {
+        transport: transport,
+        associatedAudioProducerId: audioProducerId,
+        associatedVideoProducerId: videoProducerId,
+      })
+      console.debug(`Added consumer transport ${transport.id} for producers:`, {
+        audio: audioProducerId,
+        video: videoProducerId,
+      })
     },
 
     removeConsumerTransport: (transportId: string): void => {
-      const transport = consumerTransports.get(transportId)
-      if (transport) {
-        transport.close()
+      const consumerTransport = consumerTransports.get(transportId)
+      if (consumerTransport) {
+        consumerTransport.transport.close()
         consumerTransports.delete(transportId)
       }
     },
@@ -66,7 +78,7 @@ function createClient(socket: Socket, userName: string): Client {
     },
     cleanup: (): void => {
       producerTransport?.close()
-      consumerTransports.forEach((transport) => transport.close())
+      consumerTransports.forEach((consumerTransport) => consumerTransport.transport.close())
       consumerTransports.clear()
       producers.clear()
       consumers.clear()

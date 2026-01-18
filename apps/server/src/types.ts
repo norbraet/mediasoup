@@ -1,4 +1,5 @@
 import { types } from 'mediasoup'
+import { WebRtcTransport } from 'mediasoup/types'
 import { Socket } from 'socket.io'
 
 export type ClientProducingParams = Pick<
@@ -27,17 +28,27 @@ export interface MediasoupService {
   getRouter(): types.Router
 }
 
+export type ConsumerTransport = {
+  transport: WebRtcTransport
+  associatedAudioProducerId: string
+  associatedVideoProducerId: string | null
+}
+
 export interface Client {
   socketId: string
   userName: string
   roomId: string | null
   producerTransport: types.WebRtcTransport | null
-  consumerTransports: Map<string, types.WebRtcTransport>
+  consumerTransports: Map<string, ConsumerTransport>
   producers: Map<string, types.Producer>
   consumers: Map<string, types.Consumer>
   setRoomId: (roomId: string) => void
   setProducerTransport: (transport: types.WebRtcTransport) => void
-  addConsumerTransport: (transport: types.WebRtcTransport) => void
+  addConsumerTransport: (
+    transport: types.WebRtcTransport,
+    audioProducerId: string,
+    videoProducerId: string | null
+  ) => void
   removeConsumerTransport: (transportId: string) => void
   addProducer: (producer: types.Producer) => void
   addConsumer: (consumer: types.Consumer) => void
@@ -118,7 +129,10 @@ export type ResumeConsumerAck = (response: { success: boolean; error?: string })
 
 export interface RoomHandlers {
   'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
-  'request-transport': (data: { type: RoleType }, ack: RequestTransportAck) => Promise<void>
+  'request-transport': (
+    data: { type: RoleType; audioProducerId?: string },
+    ack: RequestTransportAck
+  ) => Promise<void>
   'connect-transport': (
     data: { dtlsParameters: types.DtlsParameters; type: RoleType },
     ack: ConnectTransportAck
