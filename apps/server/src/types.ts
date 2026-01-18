@@ -182,3 +182,9 @@ export interface WorkerPoolService {
 
 // TODO: This type should be a sharable type since the frontend relys on it
 export type RoleType = 'producer' | 'consumer'
+
+export type NewProducersToConsumeData = {
+  routerRtpCapabilities: types.RtpCapabilities
+  recentSpeakersData: RecentSpeakerData[]
+  activeSpeakerList: string[]
+}

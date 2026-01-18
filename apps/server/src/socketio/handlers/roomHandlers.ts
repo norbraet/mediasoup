@@ -16,6 +16,7 @@ import {
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 import { types } from 'mediasoup'
 import env from '../../config/env'
+import { updateActiveSpeakers } from '../../services/activeSpeakerService'
 
 export function createRoomHandlers(
   socket: Socket,
@@ -328,13 +329,36 @@ const handleStartProducing =
       )
     }
 
-    // TODO: Notify others in the room about new producer
-    /* socket.to(room.name).emit('producer-added', {
-      id: producer.id,
-      kind: producer.kind,
-      userId: client.socketId,
-      userName: client.userName,
-    }) */
+    const newTransportsByPeer = updateActiveSpeakers(room, socket, clientService)
+    for (const [socketId, audioProducerIds] of Object.entries(newTransportsByPeer)) {
+      const speakerData: RecentSpeakerData[] = []
+
+      for (const audioProducerId of audioProducerIds) {
+        const producerClient = clientService.getClientByProducerId(audioProducerId)
+        if (!producerClient) continue
+
+        let videoProducerId: string | null = null
+        for (const [producerId, producer] of producerClient.producers) {
+          if (producer.kind === 'video') {
+            videoProducerId = producerId
+            break
+          }
+        }
+
+        speakerData.push({
+          audioProducerId,
+          videoProducerId,
+          userName: producerClient.userName,
+          userId: producerClient.socketId,
+        })
+      }
+
+      socket.to(socketId).emit('new-producer-to-consume', {
+        routerRtpCapabilities: room.router.rtpCapabilities,
+        recentSpeakersData: speakerData,
+        activeSpeakerList: room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER),
+      })
+    }
 
     acknowledgement({ success: true, id: producer.id })
   }

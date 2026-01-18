@@ -74,6 +74,8 @@ export function useConferenceRoom(): UseConferenceRoom {
         device.value as types.Device
       )
 
+      setupDynamicConsumerListeners(socket.getSocket(), device.value as types.Device)
+
       /* if (resp.producers && resp.producers.length > 0) {
         console.debug('Starting to consume existing producers...')
         await startConsuming()
@@ -543,6 +545,31 @@ export function useConferenceRoom(): UseConferenceRoom {
     return consumerTransport
   }
 
+  const setupDynamicConsumerListeners = (socket: Socket, device: types.Device) => {
+    socket.on(
+      'newProducersToConsume',
+      async (data: {
+        routerRtpCapabilities: types.RtpCapabilities
+        recentSpeakersData: Array<{
+          audioProducerId: string
+          videoProducerId: string | null
+          userName: string
+          userId: string
+        }>
+        activeSpeakerList: string[]
+      }) => {
+        console.log('New producers to consume:', data.recentSpeakersData)
+
+        // Create consumer transports for new active speakers
+        await requestTransportToConsume(data.recentSpeakersData, socket, device)
+      }
+    )
+
+    socket.on('update-active-speakers', (activeSpeakerIds: string[]) => {
+      console.log('Active speakers updated:', activeSpeakerIds)
+      // TODO: update UI here to highlight active speakers
+    })
+  }
   return {
     // Room State
     currentRoom: readonly(currentRoom),
