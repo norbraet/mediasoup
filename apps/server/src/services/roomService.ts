@@ -2,6 +2,7 @@
 import { types } from 'mediasoup'
 import type { Client, Room, RoomService, WorkerPoolService } from '../types'
 import { mediasoupConfig as msc } from '../config/config'
+import env from '../config/env'
 
 async function createRoom(roomName: string, workerPool: WorkerPoolService): Promise<Room> {
   // Create a new mediasoup service for this room (with its own router)
@@ -88,6 +89,9 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
     getClientCount: () => clients.size,
 
     getActiveSpeaker: (): string | undefined => activeSpeakerList[0],
+
+    getRecentSpeakers: (limit: number = env.MAX_VISIBLE_ACTIVE_SPEAKER): string[] =>
+      activeSpeakerList.slice(0, limit),
 
     addProducerToActiveSpeaker: (producer: types.Producer): void => {
       if (producer.kind === 'audio') {

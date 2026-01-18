@@ -8,9 +8,11 @@ import {
   RoleType,
   ConnectTransportAck,
   StartProducingAck,
+  RecentSpeakerData,
 } from '../../types'
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 import { types } from 'mediasoup'
+import env from '../../config/env'
 
 export function createRoomHandlers(
   socket: Socket,
@@ -55,28 +57,58 @@ const handleJoinRoom =
       room.addClient(client)
       socket.join(roomName)
 
-      // Get current producers in the room
-      const currentProducers = room.getProducers()
+      const recentSpeakersData = room
+        .getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
+        .map((socketId): RecentSpeakerData | null => {
+          const client = [...room.clients.values()].find((client) => client.socketId === socketId)
+
+          if (!client) {
+            console.debug(`Client not found for socket ID: ${socketId}`)
+            return null
+          }
+
+          let audioProducerId: string | null = null
+          let videoProducerId: string | null = null
+
+          for (const [producerId, producer] of client.producers) {
+            if (producer.kind === 'audio') {
+              audioProducerId = producerId
+            } else if (producer.kind === 'video') {
+              videoProducerId = producerId
+            }
+          }
+
+          // Only return data if client has an audio producer (since they're in recent speakers)
+          if (!audioProducerId) {
+            console.debug(`Client ${client.userName} has no audio producer`)
+            return null
+          }
+
+          return {
+            audioProducerId: audioProducerId,
+            videoProducerId: videoProducerId,
+            userName: client.userName,
+            userId: client.socketId,
+          }
+        })
+        .filter((data): data is RecentSpeakerData => data !== null)
 
       console.debug('Successfully joined room')
       console.debug('Router capabilities available:', !!room.router.rtpCapabilities)
-      console.debug('Current producers in room:', currentProducers.length)
+      console.debug('Recent speaker to consume:', recentSpeakersData)
 
       acknowledgement({
         success: true,
         routerCapabilities: room.router.rtpCapabilities,
-        producers: currentProducers.map((p) => ({
-          id: p.id,
-          kind: p.kind,
-          userId: clientService.getClientByProducerId(p.id)?.userName,
-        })),
+        recentSpeakersData,
       })
 
-      // Notify other users in room
+      // TODO: Implement notififcation of other users in the room
       socket.to(roomName).emit('user-joined', {
         userId: client.socketId,
         userName: client.userName,
       })
+
       console.groupEnd()
     } catch (error) {
       console.error('❌ join-room error:', error)

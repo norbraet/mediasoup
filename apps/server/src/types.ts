@@ -64,6 +64,7 @@ export interface Room {
   getProducers: () => types.Producer[]
   getClientCount: () => number
   getActiveSpeaker: () => string | undefined
+  getRecentSpeakers: (limit?: number) => string[]
   addProducerToActiveSpeaker: (producer: types.Producer) => void
   cleanup: () => void
 }
@@ -77,15 +78,19 @@ export interface RoomService {
   getRoomStats: () => Array<{ roomName: string; clientCount: number; workerPid: string }>
 }
 
+// TODO: Needs to be a sharable type so the frontend knows how the response is looking
+export interface RecentSpeakerData {
+  audioProducerId: string
+  videoProducerId: string | null
+  userName: string
+  userId: string
+}
+
 export type JoinRoomAck = (response: {
   success: boolean
   routerCapabilities?: unknown
-  producers?: Array<{
-    id: string
-    kind: string
-    userId?: string
-  }>
   error?: string
+  recentSpeakersData?: Array<RecentSpeakerData | null>
 }) => void
 
 export type RequestTransportAck = (response: {
@@ -101,6 +106,15 @@ export type StartProducingAck = (response: {
   id?: string
   error?: string
 }) => void
+
+export type StartConsumingAck = (response: {
+  success: boolean
+  id?: string
+  rtpParameters?: types.RtpParameters
+  error?: string
+}) => void
+
+export type ResumeConsumerAck = (response: { success: boolean; error?: string }) => void
 
 export interface RoomHandlers {
   'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
@@ -118,6 +132,11 @@ export interface RoomHandlers {
     ack: StartProducingAck
   ) => Promise<void>
   'audio-muted': (data: { isAudioMuted: boolean }) => void
+  /* 'start-consuming': (
+    data: { producerId: string; rtpCapabilities: types.RtpCapabilities },
+    ack: StartConsumingAck
+  ) => Promise<void>
+  'resume-consumer': (data: { consumerId: string }, ack: ResumeConsumerAck) => Promise<void> */
 }
 
 export interface WorkerPoolService {

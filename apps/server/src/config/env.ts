@@ -26,6 +26,7 @@ const envSchema = z
       .max(59999, { error: 'MEDIASOUP_WORKER_RTC_MAX_PORT must be at most 59999' }),
     MEDIASOUP_INCOMING_BITRATE: z.coerce.number().default(0),
     MEDIASOUP_OUTGOING_BITRATE: z.coerce.number().default(0),
+    MAX_VISIBLE_ACTIVE_SPEAKER: z.coerce.number().default(3),
   })
   .refine((data) => data.MEDIASOUP_WORKER_RTC_MAX_PORT > data.MEDIASOUP_WORKER_RTC_MIN_PORT, {
     message: 'RTC_MAX_PORT must be greater than RTC_MIN_PORT',

@@ -1,11 +1,11 @@
 import { readonly, ref } from 'vue'
 import { useSocket } from './useSocket'
-import { type CurrentProducer, type RoomParticipant } from '../types/types'
 import { Device, types } from 'mediasoup-client'
-import type { Socket } from 'socket.io-client'
 import { env } from '../config/env'
+import type { CurrentProducer, RoomParticipant, UseConferenceRoom } from '../types/types'
+import type { Socket } from 'socket.io-client'
 
-export function useConferenceRoom() {
+export function useConferenceRoom(): UseConferenceRoom {
   const socket = useSocket()
 
   // Room
@@ -15,7 +15,7 @@ export function useConferenceRoom() {
   const joinError = ref<string | null>(null)
 
   // Mediasoup
-  const device = ref<Device | null>(null)
+  const device = ref<types.Device | null>(null)
   const isDeviceReady = ref(false)
   const routerCapabilities = ref<types.RtpCapabilities | null>(null)
   const currentProducers = ref<CurrentProducer[]>([])
@@ -66,6 +66,17 @@ export function useConferenceRoom() {
       routerCapabilities.value = resp.routerCapabilities
       currentRoom.value = roomName
       currentProducers.value = resp.producers || []
+
+      requestTransportToConsume(
+        resp.recentSpeakersData,
+        socket.getSocket(),
+        device.value as types.Device
+      )
+
+      /* if (resp.producers && resp.producers.length > 0) {
+        console.debug('Starting to consume existing producers...')
+        await startConsuming()
+      } */
     } catch (error) {
       console.error('Failed to join room:', error)
       joinError.value = error instanceof Error ? error.message : 'Failed to join room'
@@ -319,6 +330,31 @@ export function useConferenceRoom() {
     } catch (error) {
       console.error('Error producing:', error)
     }
+  }
+
+  const requestTransportToConsume = (
+    recentSpeakersData: Array<{
+      audioProducerId: string
+      videoProducerId: string | null
+      userName: string
+      userId: string
+    }>,
+    socket: Socket,
+    device: types.Device | null
+  ) => {
+    console.group('requestTransportToConsume')
+    console.log(recentSpeakersData)
+    console.log('socket :>> ', socket)
+    console.log('device :>> ', device)
+    console.groupEnd()
+
+    recentSpeakersData.forEach(async (speaker) => {
+      const consumerTransportParams = await socket.emitWithAck('request-transport', {
+        type: 'consumer',
+        audioProducerId: speaker.audioProducerId,
+      })
+      console.log('consumerTransportParams :>> ', consumerTransportParams)
+    })
   }
 
   return {
