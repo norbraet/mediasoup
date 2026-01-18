@@ -11,6 +11,7 @@ import {
   RecentSpeakerData,
   ConsumeMediaAck,
   ClientConsumeMediaParams,
+  ResumeConsumerAck,
 } from '../../types'
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 import { types } from 'mediasoup'
@@ -28,6 +29,7 @@ export function createRoomHandlers(
     'start-producing': handleStartProducing(socket, roomService, clientService),
     'audio-muted': handleAudioMuted(socket, clientService, roomService),
     'consume-media': handleConsumeMedia(socket, clientService, roomService),
+    'unpause-consumer': handleUnpauseConsumer(socket, clientService),
   }
 }
 
@@ -468,5 +470,52 @@ const handleConsumeMedia =
     } catch (error) {
       console.error(error)
       acknowledgement({ success: false, error: 'Consume Media failed' })
+    }
+  }
+
+const handleUnpauseConsumer =
+  (socket: Socket, clientService: ClientService) =>
+  async (
+    data: { producerId: string; kind: types.MediaKind },
+    acknowledgement: ResumeConsumerAck
+  ): Promise<void> => {
+    const { producerId, kind } = data
+
+    try {
+      const client = clientService.getClientBySocketId(socket.id)
+      if (!client) {
+        console.debug('Client not found for consume media')
+        return
+      }
+
+      let targetConsumer: types.Consumer | undefined = undefined
+      for (const [, transportData] of client.consumerTransports) {
+        if (
+          (transportData.associatedAudioProducerId === producerId && kind === 'audio') ||
+          (transportData.associatedVideoProducerId === producerId && kind === 'video')
+        ) {
+          targetConsumer = transportData[kind]
+          break
+        }
+      }
+
+      if (!targetConsumer) {
+        console.debug(`Consumer not found for producerId: ${producerId}, kind: ${kind}`)
+        acknowledgement({ success: false, error: `Consumer not found for ${kind} producer` })
+        return
+      }
+
+      if (!targetConsumer.paused) {
+        console.debug(`Consumer for ${kind} producer ${producerId} is already resumed`)
+        acknowledgement({ success: true })
+        return
+      }
+
+      await targetConsumer.resume()
+      console.debug(`Resumed ${kind} consumer for producer ${producerId}`)
+      acknowledgement({ success: true })
+    } catch (error) {
+      console.error('Error unpausing consumer:', error)
+      acknowledgement({ success: false, error: 'Failed to unpause consumer' })
     }
   }

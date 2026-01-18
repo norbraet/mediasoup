@@ -167,12 +167,10 @@ export interface RoomHandlers {
     data: { rtpCapabilities: types.RtpCapabilities; producerId: string; kind: types.MediaKind },
     acknowledgement: ConsumeMediaAck
   ) => Promise<void>
-
-  /* 'start-consuming': (
-    data: { producerId: string; rtpCapabilities: types.RtpCapabilities },
-    ack: StartConsumingAck
+  'unpause-consumer': (
+    data: { producerId: string; kind: types.MediaKind },
+    acknowledgement: ResumeConsumerAck
   ) => Promise<void>
-  'resume-consumer': (data: { consumerId: string }, ack: ResumeConsumerAck) => Promise<void> */
 }
 
 export interface WorkerPoolService {

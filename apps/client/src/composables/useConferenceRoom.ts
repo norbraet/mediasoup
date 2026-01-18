@@ -410,6 +410,19 @@ export function useConferenceRoom(): UseConferenceRoom {
         console.debug('audioConsumer :>> ', audioConsumer)
         console.debug('videoConsumer :>> ', videoConsumer)
         console.groupEnd()
+
+        const tracks: MediaStreamTrack[] = []
+        if (audioConsumer?.track) tracks.push(audioConsumer.track)
+        if (videoConsumer?.track) tracks.push(videoConsumer.track)
+
+        const combinedStream = new MediaStream(tracks)
+
+        // TODO: This will not work in my architecture. I need a Vue-based solution to this
+        const remoteVideo: HTMLVideoElement | null = document.getElementById(
+          `remote-video-${index}`
+        ) as HTMLVideoElement
+        remoteVideo.srcObject = combinedStream
+        console.log('This wont work but hey')
       } catch (error) {
         console.error(`Error setting up consumer for ${speaker.userName}:`, error)
       }
@@ -423,7 +436,7 @@ export function useConferenceRoom(): UseConferenceRoom {
     socket: Socket,
     kind: types.MediaKind,
     index: number
-  ) => {
+  ): Promise<types.Consumer | undefined> => {
     const consumerParams = await socket.emitWithAck('consume-media', {
       rtpCapabilities: device?.rtpCapabilities,
       producerId,
@@ -447,8 +460,9 @@ export function useConferenceRoom(): UseConferenceRoom {
 
     const consumer = await consumerTransport.consume(consumerParams.params)
     console.log('consume() has finished!', consumer)
+    await socket.emitWithAck('unpause-consumer', { producerId, kind })
 
-    return consumerParams
+    return consumer
   }
 
   const createConsumerTransport = (
