@@ -388,6 +388,39 @@ export function useConferenceRoom(): UseConferenceRoom {
         )
 
         // TODO: the index here is only there to determine in what HTMLVideoElement the stream should go. maybe i find a way to do that based on the list of speakers
+        /* const [audioConsumer, videoConsumer] = await Promise.all([
+          createConsumer(
+            consumerTransport,
+            speaker.audioProducerId,
+            device,
+            socket,
+            'audio',
+            index
+          ),
+          createConsumer(
+            consumerTransport,
+            speaker.videoProducerId,
+            device,
+            socket,
+            'video',
+            index
+          ),
+        ])
+
+        console.groupCollapsed('recentSpeakersData')
+        console.debug('audioConsumer :>> ', audioConsumer)
+        console.debug('videoConsumer :>> ', videoConsumer)
+        console.groupEnd()
+
+        participants.value.set(speaker.userId, {
+          userId: speaker.userId,
+          userName: speaker.userName,
+          audioTrack: audioConsumer?.track,
+          videoTrack: videoConsumer?.track,
+          audioConsumer: audioConsumer,
+          videoConsumer: videoConsumer,
+        }) */
+
         const [audioConsumer, videoConsumer] = await Promise.all([
           createConsumer(
             consumerTransport,
@@ -406,23 +439,19 @@ export function useConferenceRoom(): UseConferenceRoom {
             index
           ),
         ])
-        console.groupCollapsed('recentSpeakersData')
-        console.debug('audioConsumer :>> ', audioConsumer)
-        console.debug('videoConsumer :>> ', videoConsumer)
-        console.groupEnd()
 
-        const tracks: MediaStreamTrack[] = []
+        participants.value.set(speaker.userId, {
+          userId: speaker.userId,
+          userName: speaker.userName,
+          audioTrack: audioConsumer?.track,
+          videoTrack: videoConsumer?.track,
+          audioConsumer: audioConsumer,
+          videoConsumer: videoConsumer,
+        })
+
+        /* const tracks: MediaStreamTrack[] = []
         if (audioConsumer?.track) tracks.push(audioConsumer.track)
-        if (videoConsumer?.track) tracks.push(videoConsumer.track)
-
-        const combinedStream = new MediaStream(tracks)
-
-        // TODO: This will not work in my architecture. I need a Vue-based solution to this
-        const remoteVideo: HTMLVideoElement | null = document.getElementById(
-          `remote-video-${index}`
-        ) as HTMLVideoElement
-        remoteVideo.srcObject = combinedStream
-        console.log('This wont work but hey')
+        if (videoConsumer?.track) tracks.push(videoConsumer.track) */
       } catch (error) {
         console.error(`Error setting up consumer for ${speaker.userName}:`, error)
       }

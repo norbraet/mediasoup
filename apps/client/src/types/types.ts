@@ -5,8 +5,10 @@ import { useSocket } from './../composables/useSocket'
 export type RoomParticipant = {
   userId: string
   userName: string
-  audioStream?: MediaStream
-  videoStream?: MediaStream
+  audioTrack?: MediaStreamTrack
+  videoTrack?: MediaStreamTrack
+  audioConsumer?: types.Consumer
+  videoConsumer?: types.Consumer
   videoElement?: HTMLVideoElement
 }
 

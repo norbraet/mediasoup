@@ -3,6 +3,7 @@
   import ConferenceControls from '../components/ConferenceControls.vue'
   import { useTypedI18n } from '../composables/useI18n'
   import { useConferenceRoom } from '../composables/useConferenceRoom'
+  import RemoteParticipant from '../components/RemoteParticipant.vue'
 
   const props = defineProps<{
     roomName: string
@@ -66,10 +67,17 @@
       <h1>{{ t('room.title') }}: {{ roomName }}</h1>
     </header>
 
-    <div class="room-content">
-      <div v-if="conference.currentRoom" class="video-container">
-        <video ref="localVideoRef" autoplay muted playsinline class="local-video" />
-      </div>
+    <div class="local-video-container">
+      <video ref="localVideoRef" autoplay playsinline muted class="local-video" />
+      <div class="local-label">You</div>
+    </div>
+
+    <div class="remote-participants-grid">
+      <RemoteParticipant
+        v-for="participant in Array.from(conference.participants.value.values())"
+        :key="participant.userId"
+        :participant="participant"
+      />
     </div>
 
     <footer class="room-controls">
@@ -86,45 +94,58 @@
 
 <style scoped>
   .conference-room {
-    /* min-height: 100vh; */
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem;
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    padding: 16px;
   }
 
-  .room-header {
-    flex-shrink: 0;
-    margin-bottom: 1rem;
-  }
-
-  .room-content {
-    flex: 1;
-  }
-
-  .video-container {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .local-video-container {
+    position: relative;
+    width: 200px;
+    height: 150px;
+    margin-bottom: 16px;
   }
 
   .local-video {
     width: 100%;
-    height: auto;
-    max-height: 60vh;
-    aspect-ratio: 16 / 9;
-    background: #0f0f0f;
-    border-radius: 8px;
+    height: 100%;
     object-fit: cover;
-    border: 1px solid #333;
-    overflow: hidden;
-    margin-top: 1rem;
+    border-radius: 8px;
   }
 
-  .room-controls {
-    flex-shrink: 0;
-    margin-top: 1rem;
+  .local-label {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    color: white;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .remote-participants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    flex: 1;
+  }
+
+  .controls {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 16px;
+  }
+
+  .controls button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
   }
 </style>
