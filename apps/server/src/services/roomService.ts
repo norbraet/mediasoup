@@ -29,9 +29,6 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
       if (index > -1) activeSpeakerList.splice(index, 1)
       activeSpeakerList.unshift(client.socketId)
 
-      // TODO: notify all clients in the room about the dominant speaker change. i need to setup a new event in my roomHandlers.ts and fire it from here
-      // TODO: updateActiveSpeakers = mute/unmute/get new transport
-
       console.debug(`Dominant speaker in room "${roomName}": ${client.userName}`)
     }
   })
@@ -104,10 +101,17 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
       }
     },
 
+    updateActiveSpeakerList: (newDominantSpeakerId: string): void => {
+      const index = activeSpeakerList.indexOf(newDominantSpeakerId)
+      if (index > -1) activeSpeakerList.splice(index, 1)
+      activeSpeakerList.unshift(newDominantSpeakerId)
+    },
+
     cleanup: (): void => {
       console.debug(`Cleaning up room "${roomName}" on worker ${worker.pid}`)
       clients.forEach((client) => client.cleanup())
       clients.clear()
+      activeSpeakerList.length = 0
       router.close()
     },
   }

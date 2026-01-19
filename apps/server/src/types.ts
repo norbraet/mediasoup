@@ -89,11 +89,12 @@ export interface Room {
   getActiveSpeaker: () => string | undefined
   getRecentSpeakers: (limit?: number) => string[]
   addProducerToActiveSpeaker: (producer: types.Producer) => void
+  updateActiveSpeakerList: (newDominantSpeakerId: string) => void
   cleanup: () => void
 }
 
 export interface RoomService {
-  createRoom: (roomName: string) => Promise<Room>
+  createRoom: (roomName: string, clientService: ClientService, socket: Socket) => Promise<Room>
   getRoomByName: (roomName: string) => Room | undefined
   getRoomById: (roomId: string) => Room | undefined
   removeRoom: (roomId: string) => void
@@ -187,4 +188,8 @@ export type NewProducersToConsumeData = {
   routerRtpCapabilities: types.RtpCapabilities
   recentSpeakersData: RecentSpeakerData[]
   activeSpeakerList: string[]
+}
+
+export interface ActiveSpeakerManager {
+  setupActiveSpeakerHandling: (room: Room) => void
 }

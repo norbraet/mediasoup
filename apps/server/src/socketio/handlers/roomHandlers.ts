@@ -12,19 +12,23 @@ import {
   ConsumeMediaAck,
   ClientConsumeMediaParams,
   ResumeConsumerAck,
+  ActiveSpeakerManager,
 } from '../../types'
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 import { types } from 'mediasoup'
 import env from '../../config/env'
 import { updateActiveSpeakers } from '../../services/activeSpeakerService'
+import { createActiveSpeakerManager } from '../../services/activeSpeakerManager'
 
 export function createRoomHandlers(
   socket: Socket,
   roomService: RoomService,
   clientService: ClientService
 ): RoomHandlers {
+  const activeSpeakerManager = createActiveSpeakerManager(clientService, socket)
+
   return {
-    'join-room': handleJoinRoom(socket, roomService, clientService),
+    'join-room': handleJoinRoom(socket, roomService, clientService, activeSpeakerManager),
     'request-transport': handleRequestTransport(socket, roomService, clientService),
     'connect-transport': handleConnectTransport(socket, clientService),
     'start-producing': handleStartProducing(socket, roomService, clientService),
@@ -35,7 +39,12 @@ export function createRoomHandlers(
 }
 
 const handleJoinRoom =
-  (socket: Socket, roomService: RoomService, clientService: ClientService) =>
+  (
+    socket: Socket,
+    roomService: RoomService,
+    clientService: ClientService,
+    activeSpeakerManager: ActiveSpeakerManager
+  ) =>
   async (
     data: { userName: string; roomName: string },
     acknowledgement: JoinRoomAck
@@ -54,7 +63,8 @@ const handleJoinRoom =
       let room = roomService.getRoomByName(roomName)
       if (!room) {
         console.debug('Creating new room:', roomName)
-        room = await roomService.createRoom(roomName)
+        room = await roomService.createRoom(roomName, clientService, socket)
+        activeSpeakerManager.setupActiveSpeakerHandling(room)
       } else {
         console.debug('Found existing room:', roomName)
       }
