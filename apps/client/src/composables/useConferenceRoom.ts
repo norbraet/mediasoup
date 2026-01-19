@@ -547,7 +547,7 @@ export function useConferenceRoom(): UseConferenceRoom {
 
   const setupDynamicConsumerListeners = (socket: Socket, device: types.Device) => {
     socket.on(
-      'newProducersToConsume',
+      'new-producer-to-consume',
       async (data: {
         routerRtpCapabilities: types.RtpCapabilities
         recentSpeakersData: Array<{
