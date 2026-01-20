@@ -28,6 +28,8 @@
     { immediate: true }
   )
 
+  const displayName = userName + ' (You)'
+
   const handleToggleVideo = async (isNowVideoOff: boolean) => {
     try {
       if (!conference.localStream.value && !isNowVideoOff) {
@@ -66,18 +68,16 @@
     <header class="room-header">
       <h1>{{ t('room.title') }}: {{ roomName }}</h1>
     </header>
-
-    <div class="local-video-container">
-      <video ref="localVideoRef" autoplay playsinline muted class="local-video" />
-      <div class="local-label">You</div>
-    </div>
-
     <div class="remote-participants-grid">
       <RemoteParticipant
         v-for="participant in Array.from(conference.participants.value.values())"
         :key="participant.userId"
         :participant="participant"
       />
+      <div class="local-video-container">
+        <video ref="localVideoRef" autoplay playsinline muted class="local-video" />
+        <div class="local-label">{{ displayName }}</div>
+      </div>
     </div>
 
     <footer class="room-controls">
@@ -95,16 +95,18 @@
 <style scoped>
   .conference-room {
     display: flex;
+    gap: 1rem;
     flex-direction: column;
-    height: 100vh;
+    height: 90vh;
     padding: 16px;
   }
 
   .local-video-container {
     position: relative;
-    width: 200px;
-    height: 150px;
-    margin-bottom: 16px;
+    background: #000;
+    border-radius: 8px;
+    border: 1px solid #3d3d3d;
+    overflow: hidden;
   }
 
   .local-video {

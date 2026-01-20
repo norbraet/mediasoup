@@ -55,10 +55,9 @@
 <style scoped>
   .remote-participant {
     position: relative;
-    width: 300px;
-    height: 200px;
     background: #000;
     border-radius: 8px;
+    border: 1px solid #3d3d3d;
     overflow: hidden;
   }
 
