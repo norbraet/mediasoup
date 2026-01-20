@@ -573,7 +573,7 @@ export function useConferenceRoom(): UseConferenceRoom {
   return {
     // Room State
     currentRoom: readonly(currentRoom),
-    participants: readonly(participants),
+    participants,
     isJoining: readonly(isJoining),
     joinError: readonly(joinError),
 

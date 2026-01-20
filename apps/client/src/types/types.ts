@@ -7,8 +7,8 @@ export type RoomParticipant = {
   userName: string
   audioTrack?: MediaStreamTrack
   videoTrack?: MediaStreamTrack
-  audioConsumer?: types.Consumer
-  videoConsumer?: types.Consumer
+  audioConsumer?: Partial<types.Consumer<types.AppData>>
+  videoConsumer?: Partial<types.Consumer<types.AppData>>
   videoElement?: HTMLVideoElement
 }
 
@@ -20,7 +20,7 @@ export interface CurrentProducer {
 export interface UseConferenceRoom {
   // Room State
   currentRoom: Readonly<Ref<string | null>>
-  participants: DeepReadonly<Ref<Map<string, RoomParticipant>>>
+  participants: Ref<Map<string, RoomParticipant>>
   isJoining: Readonly<Ref<boolean>>
   joinError: Readonly<Ref<string | null>>
 
