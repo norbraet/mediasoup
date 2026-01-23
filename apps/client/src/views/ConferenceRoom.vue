@@ -16,6 +16,7 @@
   const conference = useConferenceRoom()
   const r = (Math.random() + 1).toString(36).substring(7)
   const userName = 'Test User: ' + r
+  const initalsUserName = r.slice(0, 2).toUpperCase()
   const localVideoRef = ref<HTMLVideoElement>()
   const isActuallyMuted = computed(
     () => !conference.isAudioEnabled.value || conference.isAudioMuted.value
@@ -124,8 +125,7 @@
             :style="{ display: conference.localStream.value ? 'block' : 'none' }"
           />
           <div v-if="!conference.localStream.value" class="no-video-placeholder">
-            <div class="placeholder-icon">📹</div>
-            <div class="placeholder-text">Camera Off</div>
+            <p class="placeholder-text">{{ initalsUserName }}</p>
           </div>
           <div class="participant-label">{{ displayName }}</div>
         </div>
@@ -221,14 +221,8 @@
     color: #9aa0a6;
   }
 
-  .placeholder-icon {
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.7;
-  }
-
   .placeholder-text {
-    font-size: 0.875rem;
+    font-size: 8rem;
     opacity: 0.8;
   }
 
