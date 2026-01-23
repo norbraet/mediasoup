@@ -105,6 +105,7 @@ export function useConferenceRoom(): UseConferenceRoom {
       socket.getSocket().off('update-active-speakers')
       socket.getSocket().off('user-joined')
       socket.getSocket().off('user-left')
+      socket.getSocket().off('participant-video-changed')
 
       stopVideo()
 
@@ -188,6 +189,24 @@ export function useConferenceRoom(): UseConferenceRoom {
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled
       isVideoEnabled.value = videoTrack.enabled
+
+      // Notify server about video state change
+      if (videoProducer.value) {
+        try {
+          if (videoTrack.enabled) {
+            videoProducer.value.resume()
+          } else {
+            videoProducer.value.pause()
+          }
+
+          // Emit video state change to server
+          socket.getSocket().emit('video-toggled', {
+            isVideoEnabled: videoTrack.enabled,
+          })
+        } catch (error) {
+          console.error('Failed to toggle video producer:', error)
+        }
+      }
     }
   }
 
@@ -353,6 +372,7 @@ export function useConferenceRoom(): UseConferenceRoom {
             videoTrack: undefined,
             audioConsumer: undefined,
             videoConsumer: undefined,
+            isVideoEnabled: false, // No video track initially
           })
           continue
         }
@@ -419,6 +439,7 @@ export function useConferenceRoom(): UseConferenceRoom {
           videoTrack: videoConsumer?.track,
           audioConsumer: audioConsumer,
           videoConsumer: videoConsumer,
+          isVideoEnabled: true, // Default to true when they have a video track
         })
       } catch (error) {
         console.error(`Error setting up consumer for ${speaker.userName}:`, error)
@@ -522,6 +543,14 @@ export function useConferenceRoom(): UseConferenceRoom {
 
         // Create consumer transports for new active speakers
         await requestConsumerTransports(data.recentSpeakersData, socket, device)
+
+        // Update video enabled state for participants who just started producing
+        for (const speakerData of data.recentSpeakersData) {
+          const participant = participants.value.get(speakerData.userId)
+          if (participant) {
+            participant.isVideoEnabled = !!speakerData.videoProducerId
+          }
+        }
       }
     )
 
@@ -548,6 +577,7 @@ export function useConferenceRoom(): UseConferenceRoom {
           videoTrack: undefined,
           audioConsumer: undefined,
           videoConsumer: undefined,
+          isVideoEnabled: false, // New users start without video
         })
       }
     })
@@ -558,6 +588,19 @@ export function useConferenceRoom(): UseConferenceRoom {
       // Remove the user from participants map
       participants.value.delete(data.userId)
     })
+
+    socket.on(
+      'participant-video-changed',
+      (data: { userId: string; userName: string; isVideoEnabled: boolean }) => {
+        console.log('Participant video changed:', data.userName, 'enabled:', data.isVideoEnabled)
+
+        const participant = participants.value.get(data.userId)
+        if (participant) {
+          // Update the video enabled state for the participant
+          participant.isVideoEnabled = data.isVideoEnabled
+        }
+      }
+    )
   }
   return {
     // Room State

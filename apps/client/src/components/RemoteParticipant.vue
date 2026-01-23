@@ -61,9 +61,9 @@
       playsinline
       muted
       class="participant-video"
-      :style="{ display: participant.videoTrack ? 'block' : 'none' }"
+      :style="{ display: participant.videoTrack && participant.isVideoEnabled ? 'block' : 'none' }"
     />
-    <div v-if="!participant.videoTrack" class="no-video-placeholder">
+    <div v-if="!participant.videoTrack || !participant.isVideoEnabled" class="no-video-placeholder">
       <div class="placeholder-text">{{ initalParticipantsUserName }}</div>
     </div>
     <div class="participant-label">{{ participant.userName }}</div>

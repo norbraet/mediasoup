@@ -34,6 +34,7 @@ export function createRoomHandlers(
     'connect-transport': handleConnectTransport(socket, clientService),
     'start-producing': handleStartProducing(socket, roomService, clientService),
     'audio-muted': handleAudioMuted(socket, clientService, roomService),
+    'video-toggled': handleVideoToggled(socket, clientService, roomService),
     'consume-media': handleConsumeMedia(socket, clientService, roomService),
     'unpause-consumer': handleUnpauseConsumer(socket, clientService),
   }
@@ -479,6 +480,61 @@ const handleStartProducing =
     }
 
     acknowledgement({ success: true, id: producer.id })
+  }
+
+const handleVideoToggled =
+  (socket: Socket, clientService: ClientService, roomService: RoomService) =>
+  (data: { isVideoEnabled: boolean }): void => {
+    try {
+      console.debug('Video toggle change requested:', data.isVideoEnabled, 'for socket:', socket.id)
+
+      const client = clientService.getClientBySocketId(socket.id)
+      if (!client) {
+        console.debug('Client not found for video toggle change')
+        return
+      }
+
+      if (!client.roomId) {
+        console.debug('Client not in room for video toggle change')
+        return
+      }
+
+      const room = roomService.getRoomById(client.roomId)
+      if (!room) {
+        console.debug('Room not found for video toggle change')
+        return
+      }
+
+      let videoProducer: types.Producer | null = null
+      for (const [, producer] of client.producers) {
+        if (producer.kind === 'video') {
+          videoProducer = producer
+          break
+        }
+      }
+
+      if (!videoProducer) {
+        console.debug('No video producer found for client:', client.userName)
+        return
+      }
+
+      if (data.isVideoEnabled) {
+        videoProducer.resume()
+        console.debug(`Resumed video producer for ${client.userName}`)
+      } else {
+        videoProducer.pause()
+        console.debug(`Paused video producer for ${client.userName}`)
+      }
+
+      // Notify other clients in the room about the video state change
+      socket.to(room.name).emit('participant-video-changed', {
+        userId: client.socketId,
+        userName: client.userName,
+        isVideoEnabled: data.isVideoEnabled,
+      })
+    } catch (error) {
+      console.error('Error handling video toggle change:', error)
+    }
   }
 
 const handleAudioMuted =

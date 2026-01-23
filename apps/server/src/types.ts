@@ -174,6 +174,7 @@ export interface RoomHandlers {
     acknowledgement: ResumeConsumerAck
   ) => Promise<void>
   'leave-room': () => Promise<void>
+  'video-toggled': (data: { isVideoEnabled: boolean }) => void
 }
 
 export interface WorkerPoolService {

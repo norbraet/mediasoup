@@ -121,9 +121,15 @@
             playsinline
             muted
             class="participant-video"
-            :style="{ display: conference.localStream.value ? 'block' : 'none' }"
+            :style="{
+              display:
+                conference.localStream.value && conference.isVideoEnabled.value ? 'block' : 'none',
+            }"
           />
-          <div v-if="!conference.localStream.value" class="no-video-placeholder">
+          <div
+            v-if="!conference.localStream.value || !conference.isVideoEnabled.value"
+            class="no-video-placeholder"
+          >
             <p class="placeholder-text">{{ initalsUserName }}</p>
           </div>
           <div class="participant-label">{{ displayName }}</div>
