@@ -10,7 +10,6 @@ export const updateActiveSpeakers = async (
   const activeSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
   const allSpeakers = room.getRecentSpeakers(100) // All speakers
   const mutedSpeakers = allSpeakers.slice(env.MAX_VISIBLE_ACTIVE_SPEAKER)
-
   const newTransportsByPeer: Record<string, string[]> = {}
 
   for (const [, client] of room.clients) {

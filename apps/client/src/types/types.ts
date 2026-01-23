@@ -10,6 +10,7 @@ export type RoomParticipant = {
   audioConsumer?: Partial<types.Consumer<types.AppData>>
   videoConsumer?: Partial<types.Consumer<types.AppData>>
   videoElement?: HTMLVideoElement
+  isActiveSpeaker?: boolean
 }
 
 export interface CurrentProducer {

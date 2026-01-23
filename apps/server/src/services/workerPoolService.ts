@@ -18,7 +18,6 @@ export async function createWorkerPoolService(): Promise<WorkerPoolService> {
       const workerIndex = hash & workers.length
       const worker = workers[workerIndex]
 
-      console.debug(`Assigned room "${roomName}" to worker ${workerIndex} (PID: ${worker.pid})`)
       return worker
     },
 

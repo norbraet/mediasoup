@@ -17,23 +17,20 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
   const roomId = roomName
 
   activeSpeakerObserver.on('dominantspeaker', (dominantSpeaker) => {
-    console.debug(`Dominant speaker changed in room "${roomName}":`, dominantSpeaker.producer.id)
-
     const client = Array.from(clients.values()).find((client) =>
       Array.from(client.producers.values()).some(
         (producer) => producer.id === dominantSpeaker.producer.id
       )
     )
+
     if (client) {
       const index = activeSpeakerList.indexOf(client.socketId)
       if (index > -1) activeSpeakerList.splice(index, 1)
       activeSpeakerList.unshift(client.socketId)
-
-      console.debug(`Dominant speaker in room "${roomName}": ${client.userName}`)
+    } else {
+      console.error(`❌ Could not find client for producer ${dominantSpeaker.producer.id}`)
     }
   })
-
-  console.debug(`Creating room "${roomName}" with worker PID: ${worker.pid}`)
 
   return {
     id: roomId,
@@ -46,9 +43,6 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
     addClient: (client: Client): void => {
       clients.set(client.socketId, client)
       client.setRoomId(roomId)
-      console.debug(
-        `Added client "${client.userName}" to room "${roomName}" (${clients.size} total)`
-      )
     },
 
     removeClient: (clientId: string): void => {
@@ -58,9 +52,7 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
           if (producer.kind === 'audio') {
             try {
               activeSpeakerObserver.removeProducer({ producerId: producer.id })
-              console.debug(`Removed audio producer ${producer.id} from active speaker observer`)
             } catch (error) {
-              console.debug(`Producer ${producer.id} was not in active speaker observer:`)
               console.error(error)
             }
           }
@@ -70,8 +62,6 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
 
         const index = activeSpeakerList.indexOf(clientId)
         if (index > -1) activeSpeakerList.splice(index, 1)
-
-        console.debug(`Removed client from room "${roomName}" (${clients.size} remaining)`)
       }
     },
 
@@ -85,19 +75,45 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
 
     getClientCount: () => clients.size,
 
-    getActiveSpeaker: (): string | undefined => activeSpeakerList[0],
-
-    getRecentSpeakers: (limit: number = env.MAX_VISIBLE_ACTIVE_SPEAKER): string[] =>
-      activeSpeakerList.slice(0, limit),
+    getRecentSpeakers: (limit: number = env.MAX_VISIBLE_ACTIVE_SPEAKER): string[] => {
+      const result = activeSpeakerList.slice(0, limit)
+      console.log('result :>> ', result)
+      console.log('activeSpeakerList :>> ', activeSpeakerList)
+      return result
+    },
 
     addProducerToActiveSpeaker: (producer: types.Producer): void => {
       if (producer.kind === 'audio') {
         try {
           activeSpeakerObserver.addProducer({ producerId: producer.id })
-          console.debug(`Added audio producer ${producer.id} to active speaker observer`)
+
+          // Find the client that owns this producer and add them to activeSpeakerList if not already there
+          const client = Array.from(clients.values()).find((client) => {
+            const hasProducer = Array.from(client.producers.values()).some(
+              (p) => p.id === producer.id
+            )
+            console.debug(
+              `Client ${client.socketId} (${client.userName}) has producer ${producer.id}:`,
+              hasProducer
+            )
+            return hasProducer
+          })
+
+          if (!client) {
+            console.error(`❌ Could not find client for producer ${producer.id}`)
+          } else if (activeSpeakerList.includes(client.socketId)) {
+            console.debug(`⚠️ Client ${client.socketId} already in activeSpeakerList`)
+          } else {
+            activeSpeakerList.push(client.socketId)
+          }
         } catch (error) {
-          console.error(`Failed to add producer ${producer.id} to active speaker observer:`, error)
+          console.error(
+            `❌ Failed to add producer ${producer.id} to active speaker observer:`,
+            error
+          )
         }
+      } else {
+        console.debug(`📹 Skipping non-audio producer (${producer.kind})`)
       }
     },
 
@@ -108,11 +124,27 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
     },
 
     cleanup: (): void => {
-      console.debug(`Cleaning up room "${roomName}" on worker ${worker.pid}`)
       clients.forEach((client) => client.cleanup())
       clients.clear()
       activeSpeakerList.length = 0
       router.close()
+    },
+
+    getAllParticipantsForNewJoiner: (limit: number = env.MAX_VISIBLE_ACTIVE_SPEAKER): string[] => {
+      const allClientIds = Array.from(clients.keys())
+      const recentSpeakers = activeSpeakerList.slice(0, limit)
+      const result = [...recentSpeakers]
+
+      // Fill remaining slots with other participants
+      const remaining = limit - result.length
+
+      if (remaining > 0) {
+        const otherParticipants = allClientIds.filter((id) => !result.includes(id))
+        const toAdd = otherParticipants.slice(0, remaining)
+
+        result.push(...toAdd)
+      }
+      return result
     },
   }
 }
@@ -124,7 +156,6 @@ export function createRoomService(workerPool: WorkerPoolService): RoomService {
     createRoom: async (roomName: string): Promise<Room> => {
       const room = await createRoom(roomName, workerPool)
       rooms.set(room.id, room)
-      console.log(`Created room "${roomName}" (${rooms.size} total rooms)`)
       return room
     },
 
@@ -146,7 +177,6 @@ export function createRoomService(workerPool: WorkerPoolService): RoomService {
       if (room) {
         room.cleanup()
         rooms.delete(roomId)
-        console.log(`Removed room "${room.name}" (${rooms.size} remaining)`)
       }
     },
 

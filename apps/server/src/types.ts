@@ -86,10 +86,11 @@ export interface Room {
   removeClient: (clientId: string) => void
   getProducers: () => types.Producer[]
   getClientCount: () => number
-  getActiveSpeaker: () => string | undefined
+  // getActiveSpeaker: () => string | undefined
   getRecentSpeakers: (limit?: number) => string[]
   addProducerToActiveSpeaker: (producer: types.Producer) => void
   updateActiveSpeakerList: (newDominantSpeakerId: string) => void
+  getAllParticipantsForNewJoiner: (limit: number) => string[]
   cleanup: () => void
 }
 
@@ -104,7 +105,7 @@ export interface RoomService {
 
 // TODO: Needs to be a sharable type so the frontend knows how the response is looking
 export interface RecentSpeakerData {
-  audioProducerId: string
+  audioProducerId: string | null
   videoProducerId: string | null
   userName: string
   userId: string

@@ -10,8 +10,6 @@ export function createActiveSpeakerManager(
   // 🔥 Setup event handling for a specific room
   function setupActiveSpeakerHandling(room: Room): void {
     room.activeSpeakerObserver.on('dominantspeaker', async (dominantSpeaker) => {
-      console.debug(`Dominant speaker changed in room "${room.name}":`, dominantSpeaker.producer.id)
-
       // Find the client who owns this producer
       const client = Array.from(room.clients.values()).find((client) =>
         Array.from(client.producers.values()).some(
@@ -58,8 +56,6 @@ export function createActiveSpeakerManager(
         } catch (error) {
           console.error('Error updating active speakers on dominant speaker change:', error)
         }
-
-        console.debug(`Dominant speaker in room "${room.name}": ${client.userName}`)
       }
     })
   }

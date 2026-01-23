@@ -161,6 +161,8 @@
   video {
     position: relative;
     width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   video .title-label {
@@ -169,6 +171,25 @@
     color: blue;
     margin-top: 5px;
     margin-left: 5px;
+  }
+
+  /* Conference Room Global Styles */
+  .video-grid {
+    /* Ensure proper aspect ratio calculations */
+    container-type: size;
+  }
+
+  /* Responsive video containers */
+  @container (max-width: 600px) {
+    .video-slot {
+      aspect-ratio: 4/3 !important;
+    }
+  }
+
+  @container (max-width: 400px) {
+    .video-slot {
+      aspect-ratio: 1/1 !important;
+    }
   }
 
   button {

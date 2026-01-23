@@ -18,12 +18,10 @@ export function useSocket() {
       socket.on('connect', () => {
         isConnected.value = true
         isConnecting.value = false
-        console.debug('Connected:', socket!.id)
         resolve(socket!)
       })
 
       socket.on('disconnect', () => {
-        console.debug('Disconnected from the socket')
         isConnected.value = false
       })
 

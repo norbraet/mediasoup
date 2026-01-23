@@ -1,7 +1,6 @@
 import { readonly, ref } from 'vue'
 import { useSocket } from './useSocket'
 import { Device, types } from 'mediasoup-client'
-import { env } from '../config/env'
 import type { CurrentProducer, RoomParticipant, UseConferenceRoom } from '../types/types'
 import type { Socket } from 'socket.io-client'
 
@@ -40,7 +39,7 @@ export function useConferenceRoom(): UseConferenceRoom {
     try {
       // 1. Connect to server if not connected
       if (!socket.isConnected.value) {
-        console.debug('Socket not connected, connecting...')
+        // console.debug('Socket not connected, connecting...')
         await socket.connect()
       }
       isJoining.value = true
@@ -55,7 +54,6 @@ export function useConferenceRoom(): UseConferenceRoom {
       }
 
       // 3. Create and load device
-      console.debug('Creating mediasoup device...')
       const newDevice = new Device()
       await newDevice.load({
         routerRtpCapabilities: resp.routerCapabilities,
@@ -75,11 +73,6 @@ export function useConferenceRoom(): UseConferenceRoom {
       )
 
       setupDynamicConsumerListeners(socket.getSocket(), device.value as types.Device)
-
-      /* if (resp.producers && resp.producers.length > 0) {
-        console.debug('Starting to consume existing producers...')
-        await startConsuming()
-      } */
     } catch (error) {
       console.error('Failed to join room:', error)
       joinError.value = error instanceof Error ? error.message : 'Failed to join room'
@@ -111,8 +104,6 @@ export function useConferenceRoom(): UseConferenceRoom {
       participants.value.clear()
       joinError.value = null
       isAudioMuted.value = false
-
-      console.debug('Left room and cleaned up device')
     }
   }
 
@@ -139,10 +130,6 @@ export function useConferenceRoom(): UseConferenceRoom {
       isAudioEnabled.value = audioTrack?.enabled || false
       isAudioMuted.value = false
 
-      console.debug('Got user media successfully')
-      console.debug('Video track:', !!videoTrack)
-      console.debug('Audio track:', !!audioTrack)
-
       await startProducing()
     } catch (error) {
       console.error('Failed to get user media:', error)
@@ -150,7 +137,6 @@ export function useConferenceRoom(): UseConferenceRoom {
       throw error
     } finally {
       isGettingMedia.value = false
-      console.groupEnd()
     }
   }
 
@@ -158,7 +144,6 @@ export function useConferenceRoom(): UseConferenceRoom {
     if (localStream.value) {
       localStream.value.getTracks().forEach((track) => {
         track.stop()
-        console.debug('Stopped track:', track.kind)
       })
       localStream.value = null
     }
@@ -169,8 +154,6 @@ export function useConferenceRoom(): UseConferenceRoom {
 
     isVideoEnabled.value = false
     isAudioEnabled.value = false
-
-    console.debug('Stopped local stream')
   }
 
   const toggleVideo = (): void => {
@@ -180,13 +163,11 @@ export function useConferenceRoom(): UseConferenceRoom {
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled
       isVideoEnabled.value = videoTrack.enabled
-      console.debug('Video toggled:', isVideoEnabled.value)
     }
   }
 
   const toggleAudio = (): void => {
     if (!audioProducer.value) {
-      console.debug('No audio producer available, toggling track instead')
       toggleAudioTrack()
       return
     }
@@ -200,7 +181,6 @@ export function useConferenceRoom(): UseConferenceRoom {
         isAudioMuted.value = true
       }
       socket.getSocket().emit('audio-muted', { isAudioMuted: isAudioMuted.value })
-      console.debug('Is audio producer producing:', isAudioMuted.value)
     } catch (error) {
       console.error('Failed to toggle audio producer. Fallback to track-level toggle:', error)
       toggleAudioTrack()
@@ -215,7 +195,6 @@ export function useConferenceRoom(): UseConferenceRoom {
     if (audioTrack) {
       audioTrack.enabled = !audioTrack.enabled
       isAudioEnabled.value = audioTrack.enabled
-      console.debug('Audio toggled:', isAudioEnabled.value)
     }
   }
 
@@ -224,14 +203,12 @@ export function useConferenceRoom(): UseConferenceRoom {
     if (!localStream.value) return
 
     try {
-      console.debug('Starting to produce media...')
       if (!producerTransport.value) await createProducerTransport(socket.getSocket())
 
       await createProducer(
         localStream.value,
         producerTransport.value as types.Transport<types.AppData>
       )
-      console.debug('Successfully started producing')
     } catch (error) {
       console.error('Failed to start producing:', error)
     }
@@ -281,28 +258,6 @@ export function useConferenceRoom(): UseConferenceRoom {
         callback({ id: produceResp.id })
       }
     })
-    console.debug('videoProducer.value :>> ', videoProducer.value)
-    console.debug('audioProducer.value :>> ', audioProducer.value)
-
-    if (env.VITE_DEBUG) {
-      setInterval(async () => {
-        if (!producerTransport.value) return
-        console.groupCollapsed('RTC Statistics')
-        const stats = await producerTransport.value.getStats()
-        for (const report of stats.values()) {
-          if (report.type === 'outbound-rtp') {
-            console.group('outbound-rtp')
-            console.debug(report)
-            console.debug('bytesSent:', report.bytesSent)
-            console.debug('packetsSent:', report.packetsSent)
-            console.groupEnd()
-          } else {
-            console.debug(report)
-          }
-        }
-        console.groupEnd()
-      }, 1000)
-    }
   }
 
   const createProducer = async (
@@ -315,21 +270,17 @@ export function useConferenceRoom(): UseConferenceRoom {
     try {
       if (videoTrack) {
         videoProducer.value = await producerTransport.produce({ track: videoTrack })
-        console.debug('Video producer created')
       }
       if (audioTrack) {
         audioProducer.value = await producerTransport.produce({ track: audioTrack })
-        console.debug('Audio producer created')
 
         // TODO: Check if this is needed since i already handle the ref toggle
         audioProducer.value.on('@pause', () => {
           isAudioMuted.value = true
-          console.debug('Audio producer paused')
         })
 
         audioProducer.value.on('@resume', () => {
           isAudioMuted.value = false
-          console.debug('Audio producer resumed')
         })
       }
     } catch (error) {
@@ -347,20 +298,30 @@ export function useConferenceRoom(): UseConferenceRoom {
     socket: Socket,
     device: types.Device | null
   ) => {
-    console.groupCollapsed('requestTransportToConsume')
-    console.debug(recentSpeakersData)
-    console.debug('socket :>> ', socket)
-    console.debug('device :>> ', device)
-    console.groupEnd()
-
     for (const [index, speaker] of recentSpeakersData.entries()) {
       try {
+        // Skip participants without audio/video producers (they haven't started media yet)
+        if (!speaker.audioProducerId && !speaker.videoProducerId) {
+          // Still add them to participants map so they show up in UI
+          participants.value.set(speaker.userId, {
+            userId: speaker.userId,
+            userName: speaker.userName,
+            audioTrack: undefined,
+            videoTrack: undefined,
+            audioConsumer: undefined,
+            videoConsumer: undefined,
+          })
+          continue
+        }
+
         console.log(`Creating consumer transport for ${speaker.userName}...`)
 
         const consumerTransportParams = await socket.emitWithAck('request-transport', {
           type: 'consumer',
           audioProducerId: speaker.audioProducerId,
         })
+
+        console.log('consumerTransportParams :>> ', consumerTransportParams)
 
         if (!consumerTransportParams || typeof consumerTransportParams !== 'object') {
           console.error(`Invalid response type for ${speaker.userName}:`, consumerTransportParams)
@@ -369,7 +330,7 @@ export function useConferenceRoom(): UseConferenceRoom {
 
         if (!consumerTransportParams.success) {
           console.error(
-            `Failed to create consumer transport for ${speaker.userName}:`,
+            `❌ Transport failed for ${speaker.userName}:`,
             consumerTransportParams.error
           )
           continue
@@ -388,40 +349,6 @@ export function useConferenceRoom(): UseConferenceRoom {
           device,
           speaker.audioProducerId
         )
-
-        // TODO: the index here is only there to determine in what HTMLVideoElement the stream should go. maybe i find a way to do that based on the list of speakers
-        /* const [audioConsumer, videoConsumer] = await Promise.all([
-          createConsumer(
-            consumerTransport,
-            speaker.audioProducerId,
-            device,
-            socket,
-            'audio',
-            index
-          ),
-          createConsumer(
-            consumerTransport,
-            speaker.videoProducerId,
-            device,
-            socket,
-            'video',
-            index
-          ),
-        ])
-
-        console.groupCollapsed('recentSpeakersData')
-        console.debug('audioConsumer :>> ', audioConsumer)
-        console.debug('videoConsumer :>> ', videoConsumer)
-        console.groupEnd()
-
-        participants.value.set(speaker.userId, {
-          userId: speaker.userId,
-          userName: speaker.userName,
-          audioTrack: audioConsumer?.track,
-          videoTrack: videoConsumer?.track,
-          audioConsumer: audioConsumer,
-          videoConsumer: videoConsumer,
-        }) */
 
         const [audioConsumer, videoConsumer] = await Promise.all([
           createConsumer(
@@ -450,10 +377,6 @@ export function useConferenceRoom(): UseConferenceRoom {
           audioConsumer: audioConsumer,
           videoConsumer: videoConsumer,
         })
-
-        /* const tracks: MediaStreamTrack[] = []
-        if (audioConsumer?.track) tracks.push(audioConsumer.track)
-        if (videoConsumer?.track) tracks.push(videoConsumer.track) */
       } catch (error) {
         console.error(`Error setting up consumer for ${speaker.userName}:`, error)
       }
@@ -466,19 +389,13 @@ export function useConferenceRoom(): UseConferenceRoom {
     device: types.Device | null,
     socket: Socket,
     kind: types.MediaKind,
-    index: number
+    _index: number
   ): Promise<types.Consumer | undefined> => {
     const consumerParams = await socket.emitWithAck('consume-media', {
       rtpCapabilities: device?.rtpCapabilities,
       producerId,
       kind,
     })
-    console.groupCollapsed('createConsumer')
-    console.debug('consumerTransport :>> ', consumerTransport)
-    console.debug('consumerParams :>> ', consumerParams)
-    console.debug('index :>> ', index)
-    console.groupEnd()
-
     if (!consumerParams.success) {
       console.error(consumerParams.error || 'Failed to get consumer params')
       return
@@ -528,7 +445,6 @@ export function useConferenceRoom(): UseConferenceRoom {
     })
 
     consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
-      console.debug('Transport connect event has fired')
       const connectResp = await socket.emitWithAck('connect-transport', {
         dtlsParameters,
         type: 'consumer',
@@ -567,7 +483,12 @@ export function useConferenceRoom(): UseConferenceRoom {
 
     socket.on('update-active-speakers', (activeSpeakerIds: string[]) => {
       console.log('Active speakers updated:', activeSpeakerIds)
-      // TODO: update UI here to highlight active speakers
+
+      // Update participants with active speaker status
+      for (const [userId, participant] of participants.value) {
+        const isActiveSpeaker = activeSpeakerIds.includes(userId)
+        participant.isActiveSpeaker = isActiveSpeaker
+      }
     })
   }
   return {

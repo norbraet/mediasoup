@@ -1,7 +1,7 @@
 import { types } from 'mediasoup'
 import { Client, ClientService, ConsumerTransport } from '../types'
 import { Socket } from 'socket.io'
-import env from '../config/env'
+/* import env from '../config/env' */
 
 function createClient(socket: Socket, userName: string): Client {
   const producers = new Map<string, types.Producer>() // The client will only have audio or video. I may consider to have an object of { audio?: ..., video?: ... } instead
@@ -27,21 +27,6 @@ function createClient(socket: Socket, userName: string): Client {
     },
     setProducerTransport: (transport: types.WebRtcTransport): void => {
       producerTransport = transport
-
-      if (env.ENVIRONMENT === 'development') {
-        // eslint-disable-next-line no-undef
-        setTimeout(async () => {
-          if (!producerTransport) return
-          console.groupCollapsed('RTC Statistics')
-          const stats = await producerTransport.getStats()
-          for (const report of stats.values()) {
-            console.log('report :>> ', report)
-            console.debug('bytesReceived:', report.bytesReceived)
-            console.debug('rtpBytesReceived:', report.rtpBytesReceived)
-          }
-          console.groupEnd()
-        }, 1000)
-      }
     },
     addConsumerTransport: (
       transport: types.WebRtcTransport,
@@ -52,10 +37,6 @@ function createClient(socket: Socket, userName: string): Client {
         transport: transport,
         associatedAudioProducerId: audioProducerId,
         associatedVideoProducerId: videoProducerId,
-      })
-      console.debug(`Added consumer transport ${transport.id} for producers:`, {
-        audio: audioProducerId,
-        video: videoProducerId,
       })
     },
 
@@ -80,8 +61,6 @@ function createClient(socket: Socket, userName: string): Client {
           break
         }
       }
-
-      console.debug(`Added ${kind} consumer ${consumer.id}`)
     },
     cleanup: (): void => {
       producerTransport?.close()

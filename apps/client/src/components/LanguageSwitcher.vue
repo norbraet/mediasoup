@@ -30,17 +30,18 @@
       name="Language Selector"
       @change="handleLanguageChange"
     >
-      <option v-for="locale in availableLocales" :key="locale" :value="locale">
-        {{ languageNames[locale] }}
+      <option
+        v-for="availableLocale in availableLocales"
+        :key="availableLocale"
+        :value="availableLocale"
+      >
+        {{ languageNames[availableLocale] }}
       </option>
     </select>
   </nav>
 </template>
 
 <style scoped>
-  .header-inner > .language-switcher {
-    margin-left: auto;
-  }
   .language-switcher {
     display: inline-block;
   }
