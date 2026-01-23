@@ -69,7 +69,16 @@ const handleLeaveRoom =
         return
       }
 
-      // Close all producer transports
+      // Remove client from room FIRST (this handles ActiveSpeakerObserver cleanup while producers still exist)
+      room.removeClient(client.socketId)
+
+      // Leave the socket room
+      socket.leave(room.name)
+
+      // Remove client from service
+      clientService.removeClient(client.socketId)
+
+      // THEN close all transports (this will destroy the producers)
       if (client.producerTransport) {
         console.debug('Closing producer transport')
         client.producerTransport.close()
@@ -80,15 +89,6 @@ const handleLeaveRoom =
         console.debug('Closing consumer transport')
         transportData.transport.close()
       }
-
-      // Remove client from room
-      room.removeClient(client.socketId)
-
-      // Leave the socket room
-      socket.leave(room.name)
-
-      // Remove client from service
-      clientService.removeClient(client.socketId)
 
       // Notify other participants that user left
       socket.to(room.name).emit('user-left', {
