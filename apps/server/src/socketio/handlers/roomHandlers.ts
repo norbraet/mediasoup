@@ -29,6 +29,7 @@ export function createRoomHandlers(
 
   return {
     'join-room': handleJoinRoom(socket, roomService, clientService, activeSpeakerManager),
+    'leave-room': handleLeaveRoom(socket, roomService, clientService),
     'request-transport': handleRequestTransport(socket, roomService, clientService),
     'connect-transport': handleConnectTransport(socket, clientService),
     'start-producing': handleStartProducing(socket, roomService, clientService),
@@ -37,6 +38,83 @@ export function createRoomHandlers(
     'unpause-consumer': handleUnpauseConsumer(socket, clientService),
   }
 }
+
+const handleLeaveRoom =
+  (socket: Socket, roomService: RoomService, clientService: ClientService) =>
+  async (): Promise<void> => {
+    try {
+      console.debug(
+        '\n========== Socket Event: leave-room | roomHandlers -> handleLeaveRoom ==========\n'
+      )
+      console.debug('Socket ID:', socket.id)
+
+      const client = clientService.getClientBySocketId(socket.id)
+      if (!client) {
+        console.debug('Client not found, nothing to clean up')
+        return
+      }
+
+      console.debug('Cleaning up client:', client.userName)
+
+      const roomId = client.roomId
+      if (!roomId) {
+        console.debug('Client not in room')
+        return
+      }
+
+      const room = roomService.getRoomById(roomId)
+      if (!room) {
+        console.debug('Room not found')
+        return
+      }
+
+      // Close all producer transports
+      if (client.producerTransport) {
+        console.debug('Closing producer transport')
+        client.producerTransport.close()
+      }
+
+      // Close all consumer transports
+      for (const [, transportData] of client.consumerTransports) {
+        console.debug('Closing consumer transport')
+        transportData.transport.close()
+      }
+
+      // Remove client from room
+      room.removeClient(client.socketId)
+
+      // Leave the socket room
+      socket.leave(room.name)
+
+      // Remove client from service
+      clientService.removeClient(client.socketId)
+
+      // Notify other participants that user left
+      socket.to(room.name).emit('user-left', {
+        userId: client.socketId,
+        userName: client.userName,
+      })
+
+      // If room is empty, clean it up
+      if (room.clients.size === 0) {
+        console.debug('Room is empty, cleaning up room:', room.name)
+        // Close the router
+        room.router.close()
+        // Remove room from service
+        roomService.removeRoom(room.id)
+      } else {
+        // Update active speakers for remaining participants
+        console.debug('Updating active speakers for remaining participants')
+        const activeSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
+        socket.to(room.name).emit('update-active-speakers', activeSpeakers)
+      }
+
+      console.debug('Successfully cleaned up client:', client.userName)
+      console.debug('\n========== Socket Event: leave-room | END ==========\n')
+    } catch (error) {
+      console.error('❌ leave-room error:', error)
+    }
+  }
 
 const handleJoinRoom =
   (
@@ -124,7 +202,8 @@ const handleJoinRoom =
         recentSpeakersData,
       })
 
-      // TODO: Implement notififcation of other users in the room
+      // Notify existing participants about the new joiner
+      // They will need this info to create consumer transports when the new joiner starts producing
       socket.to(roomName).emit('user-joined', {
         userId: client.socketId,
         userName: client.userName,
@@ -168,10 +247,23 @@ const handleRequestTransport =
       }
 
       if (type === 'producer') {
+        // Check if client already has a producer transport to prevent duplicates
+        if (client.producerTransport) {
+          console.debug('Producer transport already exists for client:', client.userName)
+          // Return the existing transport params instead of erroring
+          // This handles cases where the client might request it multiple times
+          acknowledgement({
+            success: true,
+            error: 'Producer transport already exists',
+          })
+          return
+        }
+
         const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
         client.setProducerTransport(transport)
 
-        console.debug('Consumer transport clientTransportParams:', clientTransportParams)
+        console.debug('Producer transport created for client:', client.userName)
+        console.debug('Producer transport clientTransportParams:', clientTransportParams)
 
         acknowledgement({
           success: true,
@@ -330,13 +422,31 @@ const handleStartProducing =
     } else {
       console.debug(`📹 This is VIDEO producer - not adding to active speaker observer`)
     }
+    console.log(
+      `📡 ${client.userName} started producing ${parameters.kind} - notifying other participants...`
+    )
+
     const newTransportsByPeer = await updateActiveSpeakers(room, socket, clientService)
+    console.log(
+      'newTransportsByPeer:',
+      Object.keys(newTransportsByPeer).length,
+      'peers need new transports'
+    )
+
     for (const [socketId, audioProducerIds] of Object.entries(newTransportsByPeer)) {
+      const targetClient = clientService.getClientBySocketId(socketId)
+      console.log(
+        `🔄 Notifying ${targetClient?.userName || socketId} about ${audioProducerIds.length} new producers`
+      )
+
       const speakerData: RecentSpeakerData[] = []
 
       for (const audioProducerId of audioProducerIds) {
         const producerClient = clientService.getClientByProducerId(audioProducerId)
-        if (!producerClient) continue
+        if (!producerClient) {
+          console.warn(`⚠️  Producer client not found for audioProducerId: ${audioProducerId}`)
+          continue
+        }
 
         let videoProducerId: string | null = null
         for (const [producerId, producer] of producerClient.producers) {
@@ -352,8 +462,15 @@ const handleStartProducing =
           userName: producerClient.userName,
           userId: producerClient.socketId,
         })
+
+        console.log(
+          `  - ${producerClient.userName}: audio=${audioProducerId}, video=${videoProducerId || 'none'}`
+        )
       }
 
+      console.log(
+        `📤 Sending new-producer-to-consume to ${targetClient?.userName || socketId} with ${speakerData.length} speakers`
+      )
       socket.to(socketId).emit('new-producer-to-consume', {
         routerRtpCapabilities: room.router.rtpCapabilities,
         recentSpeakersData: speakerData,

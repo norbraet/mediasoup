@@ -18,6 +18,8 @@ export const initializeSocketIO = (
   })
 
   io.on('connect', (socket) => {
+    console.debug('New socket connection:', socket.id)
+
     // TODO: I need to update the webrtcHandler
     // const webrtcHandlers = createWebRTCHandlers(socket, mediasoupService)
     const roomHandlers = createRoomHandlers(socket, roomService, clientService)
@@ -31,6 +33,17 @@ export const initializeSocketIO = (
     // Register all handlers
     Object.entries(allHandlers).forEach(([event, handler]) => {
       socket.on(event, handler)
+    })
+
+    // Handle disconnect - clean up client resources
+    socket.on('disconnect', async (reason) => {
+      console.debug('Socket disconnected:', socket.id, 'reason:', reason)
+
+      // Use the same cleanup logic as leave-room
+      const leaveRoomHandler = allHandlers['leave-room']
+      if (leaveRoomHandler) {
+        await leaveRoomHandler()
+      }
     })
   })
 

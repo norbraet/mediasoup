@@ -173,6 +173,7 @@ export interface RoomHandlers {
     data: { producerId: string; kind: types.MediaKind },
     acknowledgement: ResumeConsumerAck
   ) => Promise<void>
+  'leave-room': () => Promise<void>
 }
 
 export interface WorkerPoolService {

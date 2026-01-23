@@ -66,7 +66,11 @@ export function useConferenceRoom(): UseConferenceRoom {
       currentRoom.value = roomName
       currentProducers.value = resp.producers || []
 
-      await requestTransportToConsume(
+      // 5. Request producer transport for this client
+      await requestProducerTransport(socket.getSocket())
+
+      // 6. Request consumer transports for existing participants
+      await requestConsumerTransports(
         resp.recentSpeakersData,
         socket.getSocket(),
         device.value as types.Device
@@ -81,6 +85,9 @@ export function useConferenceRoom(): UseConferenceRoom {
       device.value = null
       isDeviceReady.value = false
       currentRoom.value = null
+      producerTransport.value = null
+      videoProducer.value = null
+      audioProducer.value = null
 
       throw error
     } finally {
@@ -93,6 +100,12 @@ export function useConferenceRoom(): UseConferenceRoom {
     if (socket.getSocket() && currentRoom.value) {
       socket.getSocket().emit('leave-room')
 
+      // Remove socket listeners
+      socket.getSocket().off('new-producer-to-consume')
+      socket.getSocket().off('update-active-speakers')
+      socket.getSocket().off('user-joined')
+      socket.getSocket().off('user-left')
+
       stopVideo()
 
       // Reset all state
@@ -104,6 +117,11 @@ export function useConferenceRoom(): UseConferenceRoom {
       participants.value.clear()
       joinError.value = null
       isAudioMuted.value = false
+
+      // Reset producer transport and producers
+      producerTransport.value = null
+      videoProducer.value = null
+      audioProducer.value = null
     }
   }
 
@@ -129,6 +147,13 @@ export function useConferenceRoom(): UseConferenceRoom {
       isVideoEnabled.value = videoTrack?.enabled || false
       isAudioEnabled.value = audioTrack?.enabled || false
       isAudioMuted.value = false
+
+      // Producer transport should already be available from joinRoom
+      if (!producerTransport.value) {
+        throw new Error(
+          'Producer transport not available. This should have been created during room join.'
+        )
+      }
 
       await startProducing()
     } catch (error) {
@@ -198,53 +223,46 @@ export function useConferenceRoom(): UseConferenceRoom {
     }
   }
 
-  // Producer Mangamengt
-  const startProducing = async (): Promise<void> => {
-    if (!localStream.value) return
-
-    try {
-      if (!producerTransport.value) await createProducerTransport(socket.getSocket())
-
-      await createProducer(
-        localStream.value,
-        producerTransport.value as types.Transport<types.AppData>
-      )
-    } catch (error) {
-      console.error('Failed to start producing:', error)
-    }
-  }
-
-  const createProducerTransport = async (socket: Socket): Promise<void> => {
-    console.debug('Creating producer transport...')
-    //TODO: i should use a sharable type so the server knows what to expect
+  // Producer Management
+  const requestProducerTransport = async (socket: Socket): Promise<void> => {
+    console.debug('Requesting producer transport...')
     const producerTransportParams = await socket.emitWithAck('request-transport', {
       type: 'producer',
     })
-    console.debug(producerTransportParams)
+    console.debug('Producer transport params:', producerTransportParams)
 
     if (!device.value) {
       console.error('Missing device!')
       return
     }
 
+    if (!producerTransportParams.success) {
+      throw new Error(producerTransportParams.error || 'Failed to request producer transport')
+    }
+
+    // If transport already exists on server side, params might not be provided
+    if (!producerTransportParams.params) {
+      console.debug('Producer transport already exists on server, skipping client setup')
+      return
+    }
+
     const transport = device.value.createSendTransport(producerTransportParams.params)
     producerTransport.value = transport
+
     producerTransport.value.on('connect', async ({ dtlsParameters }, callback, errback) => {
-      // TODO: connectResp type should be a sharable type
       const connectResp = await socket.emitWithAck('connect-transport', {
         dtlsParameters,
         type: 'producer',
       })
       if (connectResp.success) {
-        console.log('We are connected')
+        console.log('Producer transport connected')
         callback()
-      } else if (!connectResp.success) {
+      } else {
         errback(connectResp.error ?? 'General Error in connect-transport')
       }
     })
 
     producerTransport.value.on('produce', async (parameters, callback, errback) => {
-      // TODO: produceResp type should be a sharable type
       const { kind, rtpParameters, appData } = parameters
       const produceResp = await socket.emitWithAck('start-producing', {
         kind,
@@ -254,10 +272,26 @@ export function useConferenceRoom(): UseConferenceRoom {
 
       if (!produceResp.success) {
         errback(produceResp.error ?? 'General start-producing error')
-      } else if (produceResp.success) {
+      } else {
         callback({ id: produceResp.id })
       }
     })
+  }
+
+  const startProducing = async (): Promise<void> => {
+    if (!localStream.value) return
+    if (!producerTransport.value) {
+      throw new Error('Producer transport not available. Call requestProducerTransport first.')
+    }
+
+    try {
+      await createProducer(
+        localStream.value,
+        producerTransport.value as types.Transport<types.AppData>
+      )
+    } catch (error) {
+      console.error('Failed to start producing:', error)
+    }
   }
 
   const createProducer = async (
@@ -288,7 +322,7 @@ export function useConferenceRoom(): UseConferenceRoom {
     }
   }
 
-  const requestTransportToConsume = async (
+  const requestConsumerTransports = async (
     recentSpeakersData: Array<{
       audioProducerId: string
       videoProducerId: string | null
@@ -298,7 +332,16 @@ export function useConferenceRoom(): UseConferenceRoom {
     socket: Socket,
     device: types.Device | null
   ) => {
+    console.groupCollapsed('requestConsumerTransports')
+    console.log('Processing speakers:', recentSpeakersData.length)
+
     for (const [index, speaker] of recentSpeakersData.entries()) {
+      console.log(`Processing speaker ${index + 1}/${recentSpeakersData.length}:`, {
+        userName: speaker.userName,
+        userId: speaker.userId,
+        hasAudio: !!speaker.audioProducerId,
+        hasVideo: !!speaker.videoProducerId,
+      })
       try {
         // Skip participants without audio/video producers (they haven't started media yet)
         if (!speaker.audioProducerId && !speaker.videoProducerId) {
@@ -381,6 +424,7 @@ export function useConferenceRoom(): UseConferenceRoom {
         console.error(`Error setting up consumer for ${speaker.userName}:`, error)
       }
     }
+    console.groupEnd()
   }
 
   const createConsumer = async (
@@ -477,7 +521,7 @@ export function useConferenceRoom(): UseConferenceRoom {
         console.log('New producers to consume:', data.recentSpeakersData)
 
         // Create consumer transports for new active speakers
-        await requestTransportToConsume(data.recentSpeakersData, socket, device)
+        await requestConsumerTransports(data.recentSpeakersData, socket, device)
       }
     )
 
@@ -489,6 +533,30 @@ export function useConferenceRoom(): UseConferenceRoom {
         const isActiveSpeaker = activeSpeakerIds.includes(userId)
         participant.isActiveSpeaker = isActiveSpeaker
       }
+    })
+
+    socket.on('user-joined', (data: { userId: string; userName: string }) => {
+      console.log('New user joined:', data.userName, data.userId)
+
+      // Add the new user to participants map (without media tracks initially)
+      // They will be updated when the user starts producing
+      if (!participants.value.has(data.userId)) {
+        participants.value.set(data.userId, {
+          userId: data.userId,
+          userName: data.userName,
+          audioTrack: undefined,
+          videoTrack: undefined,
+          audioConsumer: undefined,
+          videoConsumer: undefined,
+        })
+      }
+    })
+
+    socket.on('user-left', (data: { userId: string; userName: string }) => {
+      console.log('User left:', data.userName, data.userId)
+
+      // Remove the user from participants map
+      participants.value.delete(data.userId)
     })
   }
   return {
