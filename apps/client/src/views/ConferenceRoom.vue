@@ -14,9 +14,8 @@
 
   const { t } = useTypedI18n()
   const conference = useConferenceRoom()
-  const r = (Math.random() + 1).toString(36).substring(7)
-  const userName = 'Test User: ' + r
-  const initalsUserName = r.slice(0, 2).toUpperCase()
+  const userName = (Math.random() + 1).toString(36).substring(7)
+  const initalsUserName = userName.slice(0, 2).toUpperCase()
   const localVideoRef = ref<HTMLVideoElement>()
   const isActuallyMuted = computed(
     () => !conference.isAudioEnabled.value || conference.isAudioMuted.value

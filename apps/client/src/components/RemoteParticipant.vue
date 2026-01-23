@@ -6,6 +6,7 @@
     participant: RoomParticipant
   }>()
 
+  const initalParticipantsUserName = props.participant.userName.slice(0, 2).toUpperCase()
   const videoRef = ref<HTMLVideoElement>()
   const isAudioActive = ref(false)
 
@@ -63,8 +64,7 @@
       :style="{ display: participant.videoTrack ? 'block' : 'none' }"
     />
     <div v-if="!participant.videoTrack" class="no-video-placeholder">
-      <div class="placeholder-icon">👤</div>
-      <div class="placeholder-text">No Video</div>
+      <div class="placeholder-text">{{ initalParticipantsUserName }}</div>
     </div>
     <div class="participant-label">{{ participant.userName }}</div>
     <div v-if="isAudioActive" class="audio-indicator active">
@@ -156,14 +156,8 @@
     color: #9aa0a6;
   }
 
-  .placeholder-icon {
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.7;
-  }
-
   .placeholder-text {
-    font-size: 0.875rem;
+    font-size: 8rem;
     opacity: 0.8;
   }
 </style>
