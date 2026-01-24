@@ -15,6 +15,13 @@ export type RoomParticipant = {
   isAudioMuted?: boolean
 }
 
+export type SpeakerData = {
+  audioProducerId: string
+  videoProducerId: string | null
+  userName: string
+  userId: string
+}
+
 export interface CurrentProducer {
   id: string
   kind: 'audio' | 'video'
@@ -57,4 +64,40 @@ export interface UseConferenceRoom {
   stopAll(): void
   toggleVideo(): void
   toggleAudio(): void
+}
+
+export interface ProducerSocketApi {
+  emitAudioMuted(isMuted: boolean): void
+  emitVideoEnabled(isEnabled: boolean): void
+}
+
+export interface ProducerSignalingApi {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  requestProducerTransport(): Promise<any>
+  connectProducerTransport(dtlsParameters: types.DtlsParameters): Promise<void>
+  startProducing(params: {
+    kind: string
+    rtpParameters: types.RtpParameters
+    appData?: types.AppData
+  }): Promise<{ id: string }>
+}
+
+export interface ConsumerSignalingApi {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  requestConsumerTransport(audioProducerId: string): Promise<any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  consumeMedia(params: { rtpCapabilities: any; producerId: string; kind: string }): Promise<any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  unpauseConsumer(producerId: string, kind: string): Promise<any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  connectConsumerTransport(dtlsParameters: any, audioProducerId: string): Promise<any>
+  updateActiveSpeakers(activeSpeakerIds: string[]): void
+  participantVideoChanged(userId: string, isVideoEnabled: boolean): void
+  participantAudioChanged(userId: string, isAudioMuted: boolean): void
+  userJoined(userId: string, userName: string): void
+  userLeft(userId: string, userName: string): void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on(event: string, listener: (...args: any[]) => void): void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  off(event: string, listener?: (...args: any[]) => void): void
 }
