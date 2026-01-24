@@ -66,9 +66,15 @@
     }
   }
 
-  const handleToggleAudio = () => {
+  const handleToggleAudio = async () => {
     try {
-      conference.toggleAudio()
+      // If no stream exists and we want to enable audio, start audio-only mode
+      if (!conference.localStream.value && !conference.isAudioMuted.value) {
+        await conference.startAudio()
+      } else {
+        // Toggle existing audio
+        conference.toggleAudio()
+      }
     } catch (error) {
       console.error('Failed to toggle audio:', error)
     }

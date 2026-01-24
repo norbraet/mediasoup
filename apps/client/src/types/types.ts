@@ -12,6 +12,7 @@ export type RoomParticipant = {
   videoElement?: HTMLVideoElement
   isActiveSpeaker?: boolean
   isVideoEnabled?: boolean
+  isAudioMuted?: boolean
 }
 
 export interface CurrentProducer {
@@ -49,8 +50,11 @@ export interface UseConferenceRoom {
   // Actions
   joinRoom(userName: string, roomName: string): Promise<void>
   leaveRoom(): void
+  startAudio(): Promise<void>
   startVideo(): Promise<void>
+  stopAudio(): void
   stopVideo(): void
+  stopAll(): void
   toggleVideo(): void
   toggleAudio(): void
 }

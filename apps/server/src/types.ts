@@ -196,3 +196,8 @@ export type NewProducersToConsumeData = {
 export interface ActiveSpeakerManager {
   setupActiveSpeakerHandling: (room: Room) => void
 }
+
+export type ClientRoomContext = {
+  client: Client
+  room: Room
+}

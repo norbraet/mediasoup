@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ref, onMounted, watch } from 'vue'
+  import { ref, onMounted, watch, onUnmounted } from 'vue'
   import type { RoomParticipant } from '../types/types'
 
   const props = defineProps<{
@@ -8,7 +8,9 @@
 
   const initalParticipantsUserName = props.participant.userName.slice(0, 2).toUpperCase()
   const videoRef = ref<HTMLVideoElement>()
+  const audioRef = ref<HTMLAudioElement>()
   const isAudioActive = ref(false)
+  let audioStream: MediaStream | null = null
 
   const tryPlayVideo = () => {
     if (videoRef.value) {
@@ -17,6 +19,46 @@
       })
     }
   }
+
+  const tryPlayAudio = () => {
+    audioRef.value?.play().catch(() => {
+      // Autoplay may be blocked until user interaction
+    })
+  }
+
+  watch(
+    () => props.participant.videoTrack,
+    (newTrack) => {
+      if (newTrack && videoRef.value) {
+        const videoStream = new MediaStream([newTrack])
+        videoRef.value.srcObject = videoStream
+        tryPlayVideo()
+      }
+    }
+  )
+
+  watch(
+    () => props.participant.audioTrack,
+    (newTrack) => {
+      if (!newTrack || !audioRef.value) return
+
+      audioStream = new MediaStream([newTrack])
+      audioRef.value.srcObject = audioStream
+
+      tryPlayAudio()
+      setTimeout(tryPlayAudio, 500)
+      setTimeout(tryPlayAudio, 2000)
+    },
+    { immediate: true }
+  )
+
+  watch(
+    () => [props.participant.audioTrack, props.participant.isAudioMuted],
+    ([audioTrack, isAudioMuted]) => {
+      isAudioActive.value = !!audioTrack && !isAudioMuted
+    },
+    { immediate: true }
+  )
 
   onMounted(() => {
     if (props.participant.videoTrack && videoRef.value) {
@@ -30,26 +72,9 @@
     }
   })
 
-  // Watch for track changes
-  watch(
-    () => props.participant.videoTrack,
-    (newTrack) => {
-      if (newTrack && videoRef.value) {
-        const videoStream = new MediaStream([newTrack])
-        videoRef.value.srcObject = videoStream
-        tryPlayVideo()
-      }
-    }
-  )
-
-  // Optional: Audio level detection for visual feedback
-  watch(
-    () => props.participant.audioTrack,
-    (audioTrack) => {
-      // You could add audio level detection here later
-      isAudioActive.value = !!audioTrack
-    }
-  )
+  onUnmounted(() => {
+    audioStream?.getTracks().forEach((t) => t.stop())
+  })
 </script>
 
 <template>
@@ -63,6 +88,7 @@
       class="participant-video"
       :style="{ display: participant.videoTrack && participant.isVideoEnabled ? 'block' : 'none' }"
     />
+    <audio ref="audioRef" autoplay playsinline />
     <div v-if="!participant.videoTrack || !participant.isVideoEnabled" class="no-video-placeholder">
       <div class="placeholder-text">{{ initalParticipantsUserName }}</div>
     </div>

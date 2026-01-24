@@ -106,8 +106,9 @@ export function useConferenceRoom(): UseConferenceRoom {
       socket.getSocket().off('user-joined')
       socket.getSocket().off('user-left')
       socket.getSocket().off('participant-video-changed')
+      socket.getSocket().off('participant-audio-changed')
 
-      stopVideo()
+      stopAll()
 
       // Reset all state
       device.value = null
@@ -126,7 +127,43 @@ export function useConferenceRoom(): UseConferenceRoom {
     }
   }
 
-  // Media Managment
+  // Media Management
+  const startAudio = async (): Promise<void> => {
+    if (!device.value?.loaded) {
+      throw new Error('Device not ready. Join room first.')
+    }
+
+    isGettingMedia.value = true
+    mediaError.value = null
+
+    try {
+      console.groupCollapsed('Getting user audio...')
+      const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+      localStream.value = stream
+
+      const audioTrack = stream.getAudioTracks()[0]
+      isAudioEnabled.value = audioTrack?.enabled || false
+      isVideoEnabled.value = false // No video in audio-only mode
+      isAudioMuted.value = false
+
+      // Producer transport should already be available from joinRoom
+      if (!producerTransport.value) {
+        throw new Error(
+          'Producer transport not available. This should have been created during room join.'
+        )
+      }
+
+      await startProducing()
+    } catch (error) {
+      console.error('Failed to get user audio:', error)
+      mediaError.value = error instanceof Error ? error.message : 'Failed to access microphone'
+      throw error
+    } finally {
+      isGettingMedia.value = false
+      console.groupEnd()
+    }
+  }
+
   const startVideo = async (): Promise<void> => {
     if (!device.value?.loaded) {
       throw new Error('Device not ready. Join room first.')
@@ -136,7 +173,7 @@ export function useConferenceRoom(): UseConferenceRoom {
     mediaError.value = null
 
     try {
-      console.groupCollapsed('Getting user media...')
+      console.groupCollapsed('Getting user video+audio...')
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       localStream.value = stream
       if (localVideoRef.value) localVideoRef.value.srcObject = stream
@@ -167,6 +204,50 @@ export function useConferenceRoom(): UseConferenceRoom {
   }
 
   const stopVideo = (): void => {
+    if (localStream.value) {
+      // Only stop video tracks, keep audio if it exists
+      const videoTracks = localStream.value.getVideoTracks()
+      const audioTracks = localStream.value.getAudioTracks()
+
+      // Stop video tracks
+      videoTracks.forEach((track) => track.stop())
+
+      // If no audio tracks, stop the entire stream
+      if (audioTracks.length === 0) {
+        localStream.value = null
+      } else {
+        // Create new stream with only audio tracks
+        localStream.value = new MediaStream(audioTracks)
+      }
+    }
+
+    if (localVideoRef.value) {
+      localVideoRef.value.srcObject = null
+    }
+
+    isVideoEnabled.value = false
+    // Don't set isAudioEnabled to false - audio might still be active
+  }
+
+  const stopAudio = (): void => {
+    if (localStream.value) {
+      const audioTracks = localStream.value.getAudioTracks()
+      audioTracks.forEach((track) => track.stop())
+
+      const videoTracks = localStream.value.getVideoTracks()
+      if (videoTracks.length === 0) {
+        localStream.value = null
+      } else {
+        // Create new stream with only video tracks
+        localStream.value = new MediaStream(videoTracks)
+      }
+    }
+
+    isAudioEnabled.value = false
+    isAudioMuted.value = false
+  }
+
+  const stopAll = (): void => {
     if (localStream.value) {
       localStream.value.getTracks().forEach((track) => {
         track.stop()
@@ -321,13 +402,15 @@ export function useConferenceRoom(): UseConferenceRoom {
     const audioTrack = localStream.getAudioTracks()[0]
 
     try {
-      if (videoTrack) {
+      if (videoTrack && !videoProducer.value) {
+        console.log('Creating video producer...')
         videoProducer.value = await producerTransport.produce({ track: videoTrack })
       }
-      if (audioTrack) {
+      if (audioTrack && !audioProducer.value) {
+        console.log('Creating audio producer...')
         audioProducer.value = await producerTransport.produce({ track: audioTrack })
 
-        // TODO: Check if this is needed since i already handle the ref toggle
+        // Sync producer state with local ref state
         audioProducer.value.on('@pause', () => {
           isAudioMuted.value = true
         })
@@ -373,6 +456,7 @@ export function useConferenceRoom(): UseConferenceRoom {
             audioConsumer: undefined,
             videoConsumer: undefined,
             isVideoEnabled: false, // No video track initially
+            isAudioMuted: false, // Default to not muted
           })
           continue
         }
@@ -440,6 +524,7 @@ export function useConferenceRoom(): UseConferenceRoom {
           audioConsumer: audioConsumer,
           videoConsumer: videoConsumer,
           isVideoEnabled: true, // Default to true when they have a video track
+          isAudioMuted: false, // Default to not muted when they have audio
         })
       } catch (error) {
         console.error(`Error setting up consumer for ${speaker.userName}:`, error)
@@ -578,6 +663,7 @@ export function useConferenceRoom(): UseConferenceRoom {
           audioConsumer: undefined,
           videoConsumer: undefined,
           isVideoEnabled: false, // New users start without video
+          isAudioMuted: false, // New users start unmuted
         })
       }
     })
@@ -598,6 +684,19 @@ export function useConferenceRoom(): UseConferenceRoom {
         if (participant) {
           // Update the video enabled state for the participant
           participant.isVideoEnabled = data.isVideoEnabled
+        }
+      }
+    )
+
+    socket.on(
+      'participant-audio-changed',
+      (data: { userId: string; userName: string; isAudioMuted: boolean }) => {
+        console.log('Participant audio changed:', data.userName, 'muted:', data.isAudioMuted)
+
+        const participant = participants.value.get(data.userId)
+        if (participant) {
+          // Update the audio muted state for the participant
+          participant.isAudioMuted = data.isAudioMuted
         }
       }
     )
@@ -632,8 +731,11 @@ export function useConferenceRoom(): UseConferenceRoom {
     // Actions
     joinRoom,
     leaveRoom,
+    startAudio,
     startVideo,
+    stopAudio,
     stopVideo,
+    stopAll,
     toggleVideo,
     toggleAudio,
   }
