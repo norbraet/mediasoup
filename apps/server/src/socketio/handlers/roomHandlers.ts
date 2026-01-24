@@ -19,6 +19,7 @@ import { types } from 'mediasoup'
 import env from '../../config/env'
 import { updateActiveSpeakers } from '../../services/activeSpeakerService'
 import { createActiveSpeakerManager } from '../../services/activeSpeakerManager'
+import { getClientRoomContext } from '../../services/getClientRoomService'
 
 export function createRoomHandlers(
   socket: Socket,
@@ -44,49 +45,19 @@ const handleLeaveRoom =
   (socket: Socket, roomService: RoomService, clientService: ClientService) =>
   async (): Promise<void> => {
     try {
-      console.debug(
-        '\n========== Socket Event: leave-room | roomHandlers -> handleLeaveRoom ==========\n'
-      )
-      console.debug('Socket ID:', socket.id)
-
-      const client = clientService.getClientBySocketId(socket.id)
-      if (!client) {
-        console.debug('Client not found, nothing to clean up')
-        return
-      }
-
-      console.debug('Cleaning up client:', client.userName)
-
-      const roomId = client.roomId
-      if (!roomId) {
-        console.debug('Client not in room')
-        return
-      }
-
-      const room = roomService.getRoomById(roomId)
-      if (!room) {
-        console.debug('Room not found')
-        return
-      }
+      const ctx = getClientRoomContext(socket, clientService, roomService)
+      if (!ctx) return
+      const { client, room } = ctx
 
       // Remove client from room FIRST (this handles ActiveSpeakerObserver cleanup while producers still exist)
       room.removeClient(client.socketId)
 
-      // Leave the socket room
       socket.leave(room.name)
-
-      // Remove client from service
       clientService.removeClient(client.socketId)
-
       // THEN close all transports (this will destroy the producers)
-      if (client.producerTransport) {
-        console.debug('Closing producer transport')
-        client.producerTransport.close()
-      }
+      if (client.producerTransport) client.producerTransport.close()
 
-      // Close all consumer transports
       for (const [, transportData] of client.consumerTransports) {
-        console.debug('Closing consumer transport')
         transportData.transport.close()
       }
 
@@ -98,20 +69,12 @@ const handleLeaveRoom =
 
       // If room is empty, clean it up
       if (room.clients.size === 0) {
-        console.debug('Room is empty, cleaning up room:', room.name)
-        // Close the router
         room.router.close()
-        // Remove room from service
         roomService.removeRoom(room.id)
       } else {
-        // Update active speakers for remaining participants
-        console.debug('Updating active speakers for remaining participants')
         const activeSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
         socket.to(room.name).emit('update-active-speakers', activeSpeakers)
       }
-
-      console.debug('Successfully cleaned up client:', client.userName)
-      console.debug('\n========== Socket Event: leave-room | END ==========\n')
     } catch (error) {
       console.error('❌ leave-room error:', error)
     }
@@ -129,15 +92,7 @@ const handleJoinRoom =
     acknowledgement: JoinRoomAck
   ): Promise<void> => {
     try {
-      console.debug(
-        '\n========== Socket Event: join-room | roomHandlers -> handleJoinRoom ==========\n'
-      )
-      console.debug('User:', data.userName)
-      console.debug('Room:', data.roomName)
-      console.debug('Socket ID:', socket.id)
-
       const { userName, roomName } = data
-
       const client = clientService.createClient(socket, userName)
 
       // Get or create room (room has the router)
@@ -167,11 +122,8 @@ const handleJoinRoom =
           let videoProducerId: string | null = null
 
           for (const [producerId, producer] of remoteClient.producers) {
-            if (producer.kind === 'audio') {
-              audioProducerId = producerId
-            } else if (producer.kind === 'video') {
-              videoProducerId = producerId
-            }
+            if (producer.kind === 'audio') audioProducerId = producerId
+            else if (producer.kind === 'video') videoProducerId = producerId
           }
 
           return {
@@ -182,20 +134,6 @@ const handleJoinRoom =
           }
         })
         .filter((data): data is RecentSpeakerData => data !== null)
-
-      console.debug(
-        `📤 Final recentSpeakersData for new joiner (${recentSpeakersData.length} total):`,
-        recentSpeakersData.map((p) => ({
-          userName: p.userName,
-          userId: p.userId,
-          hasAudio: !!p.audioProducerId,
-          hasVideo: !!p.videoProducerId,
-        }))
-      )
-      console.debug('Successfully joined room')
-      console.debug('Router capabilities available:', !!room.router.rtpCapabilities)
-      console.debug('Recent speaker to consume:', recentSpeakersData)
-      console.debug('\n========== Socket Event: join-room | END ==========\n')
 
       acknowledgement({
         success: true,
@@ -225,34 +163,17 @@ const handleRequestTransport =
     acknowledgement: RequestTransportAck
   ): Promise<void> => {
     try {
-      console.debug(
-        '\n========== Socket Event: request-transport | roomHandlers -> handleRequestTransport ==========\n'
-      )
+      const ctx = getClientRoomContext(socket, clientService, roomService)
+      if (!ctx) {
+        acknowledgement({ success: false, error: 'Client or Room not found' })
+        return
+      }
+      const { client, room } = ctx
       const { type, audioProducerId } = data
-      const client = clientService.getClientBySocketId(socket.id)
-
-      if (!client) {
-        acknowledgement({ success: false, error: 'Client not found' })
-        return
-      }
-      if (!client?.roomId) {
-        console.debug('Client not in room')
-        acknowledgement({ success: false, error: 'Client not in room' })
-        return
-      }
-
-      const room = roomService.getRoomById(client.roomId as string)
-      if (!room) {
-        acknowledgement({ success: false, error: 'Room not found' })
-        return
-      }
 
       if (type === 'producer') {
         // Check if client already has a producer transport to prevent duplicates
         if (client.producerTransport) {
-          console.debug('Producer transport already exists for client:', client.userName)
-          // Return the existing transport params instead of erroring
-          // This handles cases where the client might request it multiple times
           acknowledgement({
             success: true,
             error: 'Producer transport already exists',
@@ -262,9 +183,6 @@ const handleRequestTransport =
 
         const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
         client.setProducerTransport(transport)
-
-        console.debug('Producer transport created for client:', client.userName)
-        console.debug('Producer transport clientTransportParams:', clientTransportParams)
 
         acknowledgement({
           success: true,
@@ -393,59 +311,36 @@ const handleStartProducing =
     },
     acknowledgement: StartProducingAck
   ): Promise<void> => {
-    const client = clientService.getClientBySocketId(socket.id)
-    if (!client) {
-      acknowledgement({ success: false, error: 'Client not found' })
+    const ctx = getClientRoomContext(socket, clientService, roomService)
+    if (!ctx) {
+      acknowledgement({ success: false, error: 'Client or Room not found' })
       return
     }
-
+    const { client, room } = ctx
     const transport = client.producerTransport
     if (!transport) {
       acknowledgement({ success: false, error: 'Transport not found' })
       return
     }
-
-    if (!client.roomId) {
-      acknowledgement({ success: false, error: 'Client not in room' })
-      return
-    }
-
-    const room = roomService.getRoomById(client.roomId)
-    if (!room) {
-      acknowledgement({ success: false, error: 'Room not found' })
-      return
-    }
     const producer = await transport.produce(parameters)
     client.addProducer(producer)
 
+    // TODO: Check if this is still needed
     if (parameters.kind === 'audio') {
       room.addProducerToActiveSpeaker(producer)
     } else {
       console.debug(`📹 This is VIDEO producer - not adding to active speaker observer`)
     }
-    console.log(
-      `📡 ${client.userName} started producing ${parameters.kind} - notifying other participants...`
-    )
 
     const newTransportsByPeer = await updateActiveSpeakers(room, socket, clientService)
-    console.log(
-      'newTransportsByPeer:',
-      Object.keys(newTransportsByPeer).length,
-      'peers need new transports'
-    )
 
     for (const [socketId, audioProducerIds] of Object.entries(newTransportsByPeer)) {
-      const targetClient = clientService.getClientBySocketId(socketId)
-      console.log(
-        `🔄 Notifying ${targetClient?.userName || socketId} about ${audioProducerIds.length} new producers`
-      )
-
       const speakerData: RecentSpeakerData[] = []
 
       for (const audioProducerId of audioProducerIds) {
         const producerClient = clientService.getClientByProducerId(audioProducerId)
         if (!producerClient) {
-          console.warn(`⚠️  Producer client not found for audioProducerId: ${audioProducerId}`)
+          console.warn(`Producer client not found for audioProducerId: ${audioProducerId}`)
           continue
         }
 
@@ -463,15 +358,8 @@ const handleStartProducing =
           userName: producerClient.userName,
           userId: producerClient.socketId,
         })
-
-        console.log(
-          `  - ${producerClient.userName}: audio=${audioProducerId}, video=${videoProducerId || 'none'}`
-        )
       }
 
-      console.log(
-        `📤 Sending new-producer-to-consume to ${targetClient?.userName || socketId} with ${speakerData.length} speakers`
-      )
       socket.to(socketId).emit('new-producer-to-consume', {
         routerRtpCapabilities: room.router.rtpCapabilities,
         recentSpeakersData: speakerData,
@@ -486,24 +374,9 @@ const handleVideoToggled =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
   (data: { isVideoEnabled: boolean }): void => {
     try {
-      console.debug('Video toggle change requested:', data.isVideoEnabled, 'for socket:', socket.id)
-
-      const client = clientService.getClientBySocketId(socket.id)
-      if (!client) {
-        console.debug('Client not found for video toggle change')
-        return
-      }
-
-      if (!client.roomId) {
-        console.debug('Client not in room for video toggle change')
-        return
-      }
-
-      const room = roomService.getRoomById(client.roomId)
-      if (!room) {
-        console.debug('Room not found for video toggle change')
-        return
-      }
+      const ctx = getClientRoomContext(socket, clientService, roomService)
+      if (!ctx) return
+      const { client, room } = ctx
 
       let videoProducer: types.Producer | null = null
       for (const [, producer] of client.producers) {
@@ -512,21 +385,11 @@ const handleVideoToggled =
           break
         }
       }
+      if (!videoProducer) return
 
-      if (!videoProducer) {
-        console.debug('No video producer found for client:', client.userName)
-        return
-      }
+      if (data.isVideoEnabled) videoProducer.resume()
+      else videoProducer.pause()
 
-      if (data.isVideoEnabled) {
-        videoProducer.resume()
-        console.debug(`Resumed video producer for ${client.userName}`)
-      } else {
-        videoProducer.pause()
-        console.debug(`Paused video producer for ${client.userName}`)
-      }
-
-      // Notify other clients in the room about the video state change
       socket.to(room.name).emit('participant-video-changed', {
         userId: client.socketId,
         userName: client.userName,
@@ -541,25 +404,9 @@ const handleAudioMuted =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
   (data: { isAudioMuted: boolean }): void => {
     try {
-      // console.debug('Audio mute change requested:', data.isAudioMuted, 'for socket:', socket.id)
-
-      const client = clientService.getClientBySocketId(socket.id)
-      if (!client) {
-        // console.debug('Client not found for audio mute change')
-        return
-      }
-
-      if (!client.roomId) {
-        // console.debug('Client not in room for audio mute change')
-        return
-      }
-
-      const room = roomService.getRoomById(client.roomId)
-
-      if (!room) {
-        // console.debug('Room not found for audio mute change')
-        return
-      }
+      const ctx = getClientRoomContext(socket, clientService, roomService)
+      if (!ctx) return
+      const { client, room } = ctx
 
       let audioProducer: types.Producer | null = null
       for (const [, producer] of client.producers) {
@@ -569,25 +416,16 @@ const handleAudioMuted =
         }
       }
 
-      if (!audioProducer) {
-        // console.debug('No audio producer found for client:', client.userName)
-        return
-      }
+      if (!audioProducer) return
 
-      if (data.isAudioMuted) {
-        audioProducer.pause()
-        // console.debug(`Paused audio producer for ${client.userName}`)
-      } else {
-        audioProducer.resume()
-        // console.debug(`Resumed audio producer for ${client.userName}`)
-      }
+      if (data.isAudioMuted) audioProducer.pause()
+      else audioProducer.resume()
 
-      // TODO: Implement notification of other clients in the room about the mute state change
-      /* socket.to(room.name).emit('participant-audio-changed', {
+      socket.to(room.name).emit('participant-audio-changed', {
         userId: client.socketId,
         userName: client.userName,
         isAudioMuted: data.isAudioMuted,
-      }) */
+      })
     } catch (error) {
       console.error('Error handling audio mute change:', error)
     }
@@ -605,21 +443,12 @@ const handleConsumeMedia =
   ): Promise<void> => {
     const { rtpCapabilities, producerId, kind } = data
     try {
-      const client = clientService.getClientBySocketId(socket.id)
-      if (!client) {
-        acknowledgement({ success: false, error: 'Client not found' })
+      const ctx = getClientRoomContext(socket, clientService, roomService)
+      if (!ctx) {
+        acknowledgement({ success: false, error: 'Client or Room not found' })
         return
       }
-      if (!client?.roomId) {
-        acknowledgement({ success: false, error: 'Client not in room' })
-        return
-      }
-
-      const room = roomService.getRoomById(client.roomId)
-      if (!room) {
-        acknowledgement({ success: false, error: 'Room not found' })
-        return
-      }
+      const { client, room } = ctx
 
       if (!room.router.canConsume({ producerId, rtpCapabilities })) {
         console.error(
@@ -628,8 +457,8 @@ const handleConsumeMedia =
         acknowledgement({ success: false, error: 'Cannot consume' })
         return
       }
-      // TODO: I might need to check if the producer even exists. It is possible that the producer gets dropped or exits the room
 
+      // TODO: I might need to check if the producer even exists. It is possible that the producer gets dropped or exits the room
       let targetTransport = null
       for (const [, transportData] of client.consumerTransports) {
         if (transportData.associatedAudioProducerId === producerId) {
@@ -674,15 +503,14 @@ const handleUnpauseConsumer =
     acknowledgement: ResumeConsumerAck
   ): Promise<void> => {
     const { producerId, kind } = data
+    const client = clientService.getClientBySocketId(socket.id)
+    if (!client) {
+      acknowledgement({ success: false, error: 'Client not found' })
+      return
+    }
+    let targetConsumer: types.Consumer | undefined = undefined
 
     try {
-      const client = clientService.getClientBySocketId(socket.id)
-      if (!client) {
-        // console.debug('Client not found for consume media')
-        return
-      }
-
-      let targetConsumer: types.Consumer | undefined = undefined
       for (const [, transportData] of client.consumerTransports) {
         if (
           (transportData.associatedAudioProducerId === producerId && kind === 'audio') ||
