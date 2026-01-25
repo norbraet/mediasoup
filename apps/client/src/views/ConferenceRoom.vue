@@ -219,6 +219,7 @@
     object-fit: cover;
     border-radius: 8px;
     background: #000;
+    transform: scaleX(-1);
   }
 
   .no-video-placeholder {
