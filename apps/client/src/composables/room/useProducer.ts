@@ -15,6 +15,7 @@ export function useProducer(
   const producerTransport = ref<types.Transport | null>(null)
   const videoProducer = ref<types.Producer | null>(null)
   const audioProducer = ref<types.Producer | null>(null)
+  const screenProducer = ref<types.Producer | null>(null)
 
   const requestProducerTransport = async (device: Device) => {
     console.debug('Requesting producer transport...')
@@ -68,6 +69,48 @@ export function useProducer(
       await createProducer(stream, producerTransport.value as types.Transport<types.AppData>)
     } catch (error) {
       console.error('Failed to start producing:', error)
+    }
+  }
+
+  const startScreenShare = async (stream: MediaStream) => {
+    if (!producerTransport.value) throw new Error('Producer transport not ready')
+    if (screenProducer.value) return
+
+    const videoTrack = stream.getVideoTracks()[0]
+    if (!videoTrack) throw new Error('No video track in screen stream')
+    console.log('Producing screen share track ...')
+
+    const producer = await producerTransport.value.produce({ track: videoTrack })
+    screenProducer.value = producer
+
+    videoTrack.addEventListener('ended', () => {
+      console.log('Screen share track ended (browser UI)')
+      stopScreenShare()
+    })
+
+    producer.on('transportclose', () => {
+      console.log('Screen producer transport closed')
+      screenProducer.value = null
+    })
+
+    producer.on('@close', () => {
+      console.log('Screen producer closed')
+      screenProducer.value = null
+    })
+  }
+
+  const stopScreenShare = () => {
+    if (!screenProducer.value) return
+
+    console.log('Stopping screen share producer')
+    try {
+      const track = screenProducer.value.track
+      screenProducer.value.close()
+      track?.stop()
+    } catch (err) {
+      console.warn('Error stopping screen share:', err)
+    } finally {
+      screenProducer.value = null
     }
   }
 
@@ -161,6 +204,8 @@ export function useProducer(
     audioProducer,
     requestProducerTransport,
     startProducing,
+    startScreenShare,
+    stopScreenShare,
     toggleAudio,
     toggleVideo,
     resetProducer,

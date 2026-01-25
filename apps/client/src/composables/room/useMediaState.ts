@@ -9,6 +9,9 @@ export function useMediaState() {
   const isGettingMedia = ref(false)
   const mediaError = ref<string | null>(null)
 
+  const screenStream = ref<MediaStream | null>(null)
+  const isScreenSharing = ref(false)
+
   const startAudio = async (): Promise<MediaStream> => {
     isGettingMedia.value = true
     mediaError.value = null
@@ -77,6 +80,38 @@ export function useMediaState() {
     }
   }
 
+  const startScreenShare = async (): Promise<MediaStream> => {
+    if (!navigator.mediaDevices || !('getDisplayMedia' in navigator.mediaDevices)) {
+      throw new Error('Screen sharing not supported')
+    }
+
+    try {
+      console.log('Starting screen share...')
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true, // Include system audio if available
+      })
+
+      screenStream.value = stream
+      isScreenSharing.value = true
+
+      // Auto-stop when user clicks "Stop sharing" in browser UI
+      const videoTrack = stream.getVideoTracks()[0]
+      if (videoTrack) {
+        videoTrack.addEventListener('ended', () => {
+          console.log('Screen share ended by user')
+          stopScreenShare()
+        })
+      }
+
+      return stream
+    } catch (error) {
+      console.error('Failed to start screen share:', error)
+      mediaError.value = error instanceof Error ? error.message : 'Failed to start screen sharing'
+      throw error
+    }
+  }
+
   const stopAudio = () => {
     const stream = localStream.value
     if (!stream) return
@@ -109,6 +144,13 @@ export function useMediaState() {
     isVideoEnabled.value = false
   }
 
+  const stopScreenShare = () => {
+    console.log('Stopping screen share stream...')
+    screenStream.value?.getTracks().forEach((t) => t.stop())
+    screenStream.value = null
+    isScreenSharing.value = false
+  }
+
   const stopAll = () => {
     const stream = localStream.value
     if (stream) {
@@ -121,6 +163,7 @@ export function useMediaState() {
       localVideoRef.value.srcObject = null
     }
 
+    stopScreenShare()
     isVideoEnabled.value = false
     isAudioEnabled.value = false
     isAudioMuted.value = false
@@ -154,15 +197,19 @@ export function useMediaState() {
   return {
     localStream,
     localVideoRef,
+    screenStream,
     isVideoEnabled,
     isAudioEnabled,
     isAudioMuted,
+    isScreenSharing,
     isGettingMedia,
     mediaError,
     startAudio,
     startVideo,
+    startScreenShare,
     stopAudio,
     stopVideo,
+    stopScreenShare,
     stopAll,
     toggleAudioTrack,
     toggleVideoTrack,

@@ -137,6 +137,18 @@ export function useConferenceRoom() {
     producer.toggleVideo()
   }
 
+  const toggleScreenShare = async () => {
+    if (!producer) return
+
+    if (!media.isScreenSharing.value) {
+      const stream = await media.startScreenShare()
+      await producer.startScreenShare(stream)
+    } else {
+      producer.stopScreenShare()
+      media.stopScreenShare()
+    }
+  }
+
   return {
     ...room,
     ...media,
@@ -146,5 +158,6 @@ export function useConferenceRoom() {
     startVideo,
     toggleAudio,
     toggleVideo,
+    toggleScreenShare,
   }
 }
