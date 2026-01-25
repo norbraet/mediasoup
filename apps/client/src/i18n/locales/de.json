@@ -42,7 +42,11 @@
     "lobby": "Warteraum",
     "joining": "Raum wird betreten…",
     "left": "Sie haben den Raum verlassen",
-    "participants": "{count} Teilnehmende"
+    "participants": "{count} Teilnehmende",
+    "screenShare": {
+      "sharing": "teilt Bildschirm",
+      "stop": "Teilen beenden"
+    }
   },
 
   "participants": {
@@ -50,7 +54,8 @@
     "host": "Moderator",
     "guest": "Gast",
     "muteAll": "Alle stummschalten",
-    "remove": "Teilnehmende entfernen"
+    "remove": "Teilnehmende entfernen",
+    "screenSharing": "Teilt Bildschirm"
   },
 
   "chat": {

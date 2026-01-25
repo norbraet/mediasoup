@@ -42,7 +42,11 @@
     "lobby": "Lobby",
     "joining": "Joining room…",
     "left": "You have left the room",
-    "participants": "{count} participants"
+    "participants": "{count} participants",
+    "screenShare": {
+      "sharing": "is sharing screen",
+      "stop": "Stop sharing"
+    }
   },
 
   "participants": {
@@ -50,7 +54,8 @@
     "host": "Host",
     "guest": "Guest",
     "muteAll": "Mute all",
-    "remove": "Remove participant"
+    "remove": "Remove participant",
+    "screenSharing": "Sharing screen"
   },
 
   "chat": {
