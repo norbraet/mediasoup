@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { useTypedI18n } from '../composables/useI18n'
-  import { Circle, Mic, MicOffIcon, ScreenShare, Video, VideoOff } from 'lucide-vue-next'
+  import { Mic, MicOffIcon, ScreenShare, Video, VideoOff } from 'lucide-vue-next'
   import { ref, watch } from 'vue'
 
   const props = defineProps<{
@@ -13,8 +13,7 @@
   const emit = defineEmits<{
     'toggle-audio': []
     'toggle-video': [isNowVideoOff: boolean]
-    'toggle-screen-share': [isNowPresenting: boolean]
-    'toggle-recording': [isNowRecording: boolean]
+    'toggle-screen-share': []
   }>()
 
   const iconSize = 24
@@ -25,6 +24,9 @@
   const localVideoOff = ref(props.isVideoOff ?? false)
   const localPresenting = ref(props.isPresenting ?? false)
   const localRecording = ref(props.isRecording ?? false)
+
+  const isDisplayMediaAvailable = () =>
+    navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices ? true : false
 
   // Watch for prop changes to sync with parent
   watch(
@@ -70,13 +72,7 @@
   }
 
   const handleToggleScreenShare = () => {
-    localPresenting.value = !localPresenting.value
-    emit('toggle-screen-share', localPresenting.value)
-  }
-
-  const handleToggleRecording = () => {
-    localRecording.value = !localRecording.value
-    emit('toggle-recording', localRecording.value)
+    emit('toggle-screen-share')
   }
 </script>
 
@@ -103,21 +99,13 @@
     </button>
 
     <button
+      v-if="isDisplayMediaAvailable()"
       class="control-btn"
       :class="{ 'screen-sharing': localPresenting }"
       :title="localPresenting ? t('controls.screenShare.stop') : t('controls.screenShare.start')"
       @click="handleToggleScreenShare"
     >
       <ScreenShare :size="iconSize" />
-    </button>
-
-    <button
-      class="control-btn"
-      :class="{ 'recording-active': localRecording }"
-      :title="localRecording ? t('controls.recording.stop') : t('controls.recording.start')"
-      @click="handleToggleRecording"
-    >
-      <Circle :size="iconSize" />
     </button>
   </div>
 </template>
