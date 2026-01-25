@@ -175,6 +175,7 @@ export interface RoomHandlers {
   ) => Promise<void>
   'leave-room': () => Promise<void>
   'video-toggled': (data: { isVideoEnabled: boolean }) => void
+  'chat-message': (data: SendChatMessageData) => void
 }
 
 export interface WorkerPoolService {
@@ -200,4 +201,18 @@ export interface ActiveSpeakerManager {
 export type ClientRoomContext = {
   client: Client
   room: Room
+}
+
+// Chat types
+export type ChatMessage = {
+  userId: string
+  userName: string
+  message: string
+  timestamp: number
+}
+
+export type SendChatMessageData = {
+  roomId: string
+  message: string
+  timestamp: number
 }

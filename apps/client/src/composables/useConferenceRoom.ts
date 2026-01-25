@@ -7,7 +7,16 @@ import { useRoomState } from './room/useRoomState'
 import { createProducerSocketApi } from '../services/producerEventApi'
 import { createProducerSignalingApi } from '../services/producerSignalingApi'
 import { createConsumerSignalingApi } from '../services/consumerSignalingApi'
-import type { ConsumerSignalingApi, ProducerSignalingApi, ProducerSocketApi } from '../types/types'
+import type {
+  ChatSocketApi,
+  ConsumerSignalingApi,
+  ProducerSignalingApi,
+  ProducerSocketApi,
+  UseChat,
+} from '../types/types'
+import { useChat } from './useChat'
+import { createChatSocketApi } from '../services/chatSocketApi'
+import { shallowRef } from 'vue'
 
 export function useConferenceRoom() {
   const socket = useSocket()
@@ -15,6 +24,7 @@ export function useConferenceRoom() {
   let producerSignalingApi: ProducerSignalingApi
   let producerEventApi: ProducerSocketApi
   let consumerSignalingApi: ConsumerSignalingApi
+  let chatSocketApi: ChatSocketApi
 
   const room = useRoomState()
   const media = useMediaState()
@@ -27,18 +37,22 @@ export function useConferenceRoom() {
 
   let producer: ReturnType<typeof useProducer> | null = null
   let consumer: ReturnType<typeof useConsumer> | null = null
+  const chat = shallowRef<UseChat | null>(null)
+
+  // Create a computed property that returns the chat instance or null
+  // const chat = computed(() => chat)
 
   const joinRoom = async (userName: string, roomName: string) => {
     console.groupCollapsed('join-room')
     try {
-      // 1. Connect to server if not connected
+      // Connect to server if not connected
       if (!socket.isConnected.value) {
         await socket.connect()
       }
       room.isJoining.value = true
       room.joinError.value = null
 
-      // 2. Join the room and get router capabilities
+      // Join the room and get router capabilities
       console.debug('Joining room...')
       const joinResp = await socket.getSocket().emitWithAck('join-room', { userName, roomName })
       console.debug('join-room - resp :>> ', joinResp)
@@ -47,25 +61,29 @@ export function useConferenceRoom() {
         throw new Error(joinResp.error || 'Failed to join room')
       }
 
-      // 3. Create APIs
+      // Create APIs
       producerSignalingApi = createProducerSignalingApi(socket.getSocket())
       producerEventApi = createProducerSocketApi(socket.getSocket())
       consumerSignalingApi = createConsumerSignalingApi(socket.getSocket())
+      chatSocketApi = createChatSocketApi(socket.getSocket())
 
-      // 4. Create and load device
+      // Create and load device
       const device = new Device()
       await device.load({ routerRtpCapabilities: joinResp.routerCapabilities })
 
-      // 5. Create producer and consumer
+      // Create producer and consumer
       producer = useProducer(producerSignalingApi, producerEventApi, mediaState)
       consumer = useConsumer(consumerSignalingApi, room.participants)
 
-      // 6. Set up transports and consumers
+      // Set up transports and consumers
       await producer.requestProducerTransport(device)
       await consumer.requestConsumerTransports(joinResp.recentSpeakersData, device)
       consumer.setupDynamicConsumerListeners(device)
 
-      // 7. Update room state
+      // Setup chat
+      chat.value = useChat(chatSocketApi)
+
+      // Update room state
       room.currentRoom.value = roomName
     } catch (error) {
       console.error('Failed to join room:', error)
@@ -74,6 +92,7 @@ export function useConferenceRoom() {
       // Cleanup on error
       producer?.resetProducer()
       media.stopAll()
+      chat.value?.clearMessages()
       room.resetRoom()
 
       throw error
@@ -95,19 +114,17 @@ export function useConferenceRoom() {
       socket.getSocket().off('participant-video-changed')
       socket.getSocket().off('participant-audio-changed')
 
+      // Cleanup chat
+      chat.value?.cleanupChatListeners()
+      chat.value?.clearMessages()
+      chat.value = null
+
       // Cleanup producer and consumer
       producer?.resetProducer()
       media.stopAll()
+      if (consumer) consumer.consumerTransports.value.forEach((transport) => transport.close())
 
-      // Close all consumer transports
-      if (consumer) {
-        consumer.consumerTransports.value.forEach((transport) => transport.close())
-      }
-
-      // Reset room state
       room.resetRoom()
-
-      // Reset references
       producer = null
       consumer = null
     }
@@ -159,5 +176,6 @@ export function useConferenceRoom() {
     toggleAudio,
     toggleVideo,
     toggleScreenShare,
+    chat,
   }
 }

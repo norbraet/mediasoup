@@ -1,12 +1,14 @@
 <script setup lang="ts">
   import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+
   import ConferenceControls from '../components/ConferenceControls.vue'
+  import ChatPanel from '../components/ChatPanel.vue'
+
+  import LanguageSwitcher from '../components/LanguageSwitcher.vue'
   import { useTypedI18n } from '../composables/useI18n'
   import { useConferenceRoom } from '../composables/useConferenceRoom'
   import RemoteParticipant from '../components/RemoteParticipant.vue'
   import { useVideoGrid } from '../composables/useVideoGrid'
-
-  import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
   const props = defineProps<{
     roomName: string
@@ -201,6 +203,11 @@
         @toggle-screen-share="handleToggleScreenShare"
       />
     </footer>
+    <ChatPanel
+      v-if="conference.chat.value && conference.currentRoom.value"
+      :chat="conference.chat.value"
+      :room-name="conference.currentRoom.value"
+    />
   </section>
 </template>
 

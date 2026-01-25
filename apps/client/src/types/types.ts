@@ -1,7 +1,6 @@
 import type { DeepReadonly, Ref } from 'vue'
 import { types } from 'mediasoup-client'
 import { useSocket } from './../composables/useSocket'
-
 export type RoomParticipant = {
   userId: string
   userName: string
@@ -100,4 +99,34 @@ export interface ConsumerSignalingApi {
   on(event: string, listener: (...args: any[]) => void): void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   off(event: string, listener?: (...args: any[]) => void): void
+}
+
+// Chat types
+export type ChatMessage = {
+  userId: string
+  userName: string
+  message: string
+  timestamp: number
+}
+
+export type SendChatMessageData = {
+  roomId: string
+  message: string
+  timestamp: number
+}
+
+export interface ChatSocketApi {
+  sendChatMessage(data: SendChatMessageData): void
+  onChatMessage(callback: (message: ChatMessage) => void): void
+  offChatMessage(callback?: (message: ChatMessage) => void): void
+}
+
+export interface UseChat {
+  messages: Ref<ChatMessage[]>
+  sendMessage: (roomId: string, messageText: string) => void
+  clearMessages: () => void
+  getMessagesFromUser: (userId: string) => ChatMessage[]
+  getRecentMessages: (count?: number) => ChatMessage[]
+  setupChatListeners: () => void
+  cleanupChatListeners: () => void
 }

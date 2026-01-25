@@ -1,0 +1,64 @@
+// useChat.ts
+import { onUnmounted, ref } from 'vue'
+import type { ChatMessage, SendChatMessageData, ChatSocketApi, UseChat } from '../types/types'
+
+export function useChat(chatApi: ChatSocketApi): UseChat {
+  const messages = ref<ChatMessage[]>([])
+
+  const handleIncomingMessage = (message: ChatMessage) => {
+    messages.value.push(message)
+  }
+
+  // Setup listeners
+  const setupChatListeners = () => {
+    chatApi.onChatMessage(handleIncomingMessage)
+  }
+
+  // Cleanup listeners
+  const cleanupChatListeners = () => {
+    chatApi.offChatMessage(handleIncomingMessage)
+  }
+
+  // Send message
+  const sendMessage = (roomId: string, messageText: string) => {
+    if (!messageText.trim()) return
+    if (!roomId) {
+      console.warn('Cannot send message: no room joined')
+      return
+    }
+
+    const messageData: SendChatMessageData = {
+      roomId,
+      message: messageText.trim(),
+      timestamp: Date.now(),
+    }
+
+    chatApi.sendChatMessage(messageData)
+  }
+
+  const clearMessages = () => {
+    messages.value = []
+  }
+
+  const getMessagesFromUser = (userId: string) =>
+    messages.value.filter((msg) => msg.userId === userId)
+
+  const getRecentMessages = (count = 50) => messages.value.slice(-count)
+
+  setupChatListeners()
+
+  onUnmounted(() => {
+    cleanupChatListeners()
+  })
+
+  return {
+    messages: messages,
+
+    sendMessage,
+    clearMessages,
+    getMessagesFromUser,
+    getRecentMessages,
+    setupChatListeners,
+    cleanupChatListeners,
+  }
+}

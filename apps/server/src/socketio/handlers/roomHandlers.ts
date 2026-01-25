@@ -13,6 +13,8 @@ import {
   ClientConsumeMediaParams,
   ResumeConsumerAck,
   ActiveSpeakerManager,
+  SendChatMessageData,
+  ChatMessage,
 } from '../../types'
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 import { types } from 'mediasoup'
@@ -38,6 +40,7 @@ export function createRoomHandlers(
     'video-toggled': handleVideoToggled(socket, clientService, roomService),
     'consume-media': handleConsumeMedia(socket, clientService, roomService),
     'unpause-consumer': handleUnpauseConsumer(socket, clientService),
+    'chat-message': handleChatMessage(socket, clientService, roomService),
   }
 }
 
@@ -536,5 +539,49 @@ const handleUnpauseConsumer =
     } catch (error) {
       console.error('Error unpausing consumer:', error)
       acknowledgement({ success: false, error: 'Failed to unpause consumer' })
+    }
+  }
+
+const handleChatMessage =
+  (socket: Socket, clientService: ClientService, roomService: RoomService) =>
+  (data: SendChatMessageData): void => {
+    try {
+      const ctx = getClientRoomContext(socket, clientService, roomService)
+      if (!ctx) {
+        console.warn('Chat message from client not in room:', socket.id)
+        return
+      }
+      const { client, room } = ctx
+
+      // Validate message
+      if (!data.message || typeof data.message !== 'string' || data.message.trim().length === 0) {
+        console.warn('Invalid chat message from client:', client.socketId)
+        return
+      }
+
+      // Validate roomId matches
+      if (data.roomId !== room.name) {
+        console.warn('Chat message roomId mismatch:', {
+          expected: room.name,
+          received: data.roomId,
+        })
+        return
+      }
+
+      // Create the message to broadcast
+      const chatMessage: ChatMessage = {
+        userId: client.socketId,
+        userName: client.userName,
+        message: data.message.trim(),
+        timestamp: data.timestamp || Date.now(),
+      }
+
+      // Broadcast to all clients in the room (including sender)
+      socket.to(room.name).emit('chat-message', chatMessage)
+      socket.emit('chat-message', chatMessage) // Echo back to sender for consistency
+
+      console.debug(`💬 Chat message in ${room.name}: ${client.userName}: ${chatMessage.message}`)
+    } catch (error) {
+      console.error('Error handling chat message:', error)
     }
   }
