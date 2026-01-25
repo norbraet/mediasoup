@@ -17,8 +17,36 @@
   const userName = (Math.random() + 1).toString(36).substring(7)
   const initalsUserName = userName.slice(0, 2).toUpperCase()
   const localVideoRef = ref<HTMLVideoElement>()
+  const screenShareRef = ref<HTMLVideoElement>()
   const isActuallyMuted = computed(
     () => !conference.isAudioEnabled.value || conference.isAudioMuted.value
+  )
+
+  watch(
+    screenShareRef,
+    (videoElement) => {
+      if (videoElement && conference.screenStream.value) {
+        videoElement.srcObject = conference.screenStream.value
+        videoElement.play().catch((e) => console.debug('Screen share video play failed:', e))
+      }
+    },
+    { immediate: true }
+  )
+
+  // Watch for screen stream changes
+  watch(
+    () => conference.screenStream.value,
+    (stream) => {
+      if (stream && screenShareRef.value) {
+        screenShareRef.value.srcObject = stream
+        screenShareRef.value
+          .play()
+          .catch((e) => console.debug('Screen share video play failed:', e))
+      } else if (screenShareRef.value) {
+        screenShareRef.value.srcObject = null
+      }
+    },
+    { immediate: true }
   )
 
   watch(
@@ -80,6 +108,14 @@
     }
   }
 
+  const handleToggleScreenShare = async () => {
+    try {
+      await conference.toggleScreenShare()
+    } catch (error) {
+      console.error('Failed to toggle screen share:', error)
+    }
+  }
+
   onMounted(async () => {
     try {
       await conference.joinRoom(userName, props.roomName)
@@ -100,8 +136,19 @@
       <LanguageSwitcher />
     </header>
 
+    <div v-if="conference.isScreenSharing.value" class="screen-share-container">
+      <div class="screen-share-header">
+        <h3>{{ displayName }} {{ t('room.screenShare.sharing') }}</h3>
+        <button class="stop-share-btn" @click="handleToggleScreenShare">
+          {{ t('room.screenShare.stop') }}
+        </button>
+      </div>
+      <video ref="screenShareRef" autoplay playsinline class="screen-share-video" />
+    </div>
+
     <div
       class="video-grid"
+      :class="{ 'with-screen-share': conference.isScreenSharing.value }"
       :style="{
         '--grid-columns': gridConfig.columns,
         '--grid-rows': gridConfig.rows,
@@ -148,14 +195,66 @@
         v-if="conference.currentRoom && !conference.joinError.value"
         :is-muted="isActuallyMuted"
         :is-video-off="!conference.isVideoEnabled"
+        :is-presenting="conference.isScreenSharing.value"
         @toggle-video="handleToggleVideo"
         @toggle-audio="handleToggleAudio"
+        @toggle-screen-share="handleToggleScreenShare"
       />
     </footer>
   </section>
 </template>
 
 <style scoped>
+  .screen-share-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background: #000;
+  }
+
+  .screen-share-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .screen-share-header h3 {
+    margin: 0;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .stop-share-btn {
+    background: #ea4335;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .stop-share-btn:hover {
+    background: #d33b2c;
+  }
+
+  .screen-share-video {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    border-radius: 8px;
+  }
+
   .conference-room {
     display: flex;
     flex-direction: column;
@@ -191,6 +290,16 @@
     min-height: 0; /* Allow grid to shrink */
   }
 
+  .video-grid.with-screen-share {
+    /* When screen sharing is active, make video grid smaller */
+    display: flex;
+    flex: 0 0 200px;
+    padding: 8px;
+    gap: 4px;
+    /* Force single row for participants when screen sharing */
+    grid-template-rows: 1fr;
+  }
+
   .video-slot {
     width: 100%;
     height: 100%;
@@ -198,6 +307,10 @@
     min-height: 0;
     aspect-ratio: var(--aspect-ratio);
     max-height: 100%;
+  }
+
+  .video-grid.with-screen-share .video-slot {
+    width: auto;
   }
 
   .video-container {
@@ -278,6 +391,28 @@
     .video-grid {
       padding: 8px;
       gap: 4px;
+    }
+
+    .video-grid.with-screen-share {
+      flex: 0 0 150px;
+    }
+
+    .screen-share-container {
+      padding: 8px;
+    }
+
+    .screen-share-header {
+      padding: 8px 12px;
+      margin-bottom: 8px;
+    }
+
+    .screen-share-header h3 {
+      font-size: 0.9rem;
+    }
+
+    .stop-share-btn {
+      padding: 6px 12px;
+      font-size: 12px;
     }
 
     .room-header {
