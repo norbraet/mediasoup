@@ -148,48 +148,57 @@
       <video ref="screenShareRef" autoplay playsinline class="screen-share-video" />
     </div>
 
-    <div
-      class="video-grid"
-      :class="{ 'with-screen-share': conference.isScreenSharing.value }"
-      :style="{
-        '--grid-columns': gridConfig.columns,
-        '--grid-rows': gridConfig.rows,
-        '--aspect-ratio': gridConfig.aspectRatio,
-      }"
-    >
-      <!-- Remote Participants -->
+    <div class="main-container">
       <div
-        v-for="participant in Array.from(conference.participants.value.values())"
-        :key="participant.userId"
-        class="video-slot"
-        :class="{ 'active-speaker': participant.isActiveSpeaker }"
+        class="video-grid"
+        :class="{ 'with-screen-share': conference.isScreenSharing.value }"
+        :style="{
+          '--grid-columns': gridConfig.columns,
+          '--grid-rows': gridConfig.rows,
+          '--aspect-ratio': gridConfig.aspectRatio,
+        }"
       >
-        <RemoteParticipant :participant="participant" />
-      </div>
+        <!-- Remote Participants -->
+        <div
+          v-for="participant in Array.from(conference.participants.value.values())"
+          :key="participant.userId"
+          class="video-slot"
+          :class="{ 'active-speaker': participant.isActiveSpeaker }"
+        >
+          <RemoteParticipant :participant="participant" />
+        </div>
 
-      <!-- Local Video (always show slot, but conditionally show video) -->
-      <div class="video-slot local-slot">
-        <div class="video-container">
-          <video
-            ref="localVideoRef"
-            autoplay
-            playsinline
-            muted
-            class="participant-video"
-            :style="{
-              display:
-                conference.localStream.value && conference.isVideoEnabled.value ? 'block' : 'none',
-            }"
-          />
-          <div
-            v-if="!conference.localStream.value || !conference.isVideoEnabled.value"
-            class="no-video-placeholder"
-          >
-            <p class="placeholder-text">{{ initalsUserName }}</p>
+        <!-- Local Video (always show slot, but conditionally show video) -->
+        <div class="video-slot local-slot">
+          <div class="video-container">
+            <video
+              ref="localVideoRef"
+              autoplay
+              playsinline
+              muted
+              class="participant-video"
+              :style="{
+                display:
+                  conference.localStream.value && conference.isVideoEnabled.value
+                    ? 'block'
+                    : 'none',
+              }"
+            />
+            <div
+              v-if="!conference.localStream.value || !conference.isVideoEnabled.value"
+              class="no-video-placeholder"
+            >
+              <p class="placeholder-text">{{ initalsUserName }}</p>
+            </div>
+            <div class="participant-label">{{ displayName }}</div>
           </div>
-          <div class="participant-label">{{ displayName }}</div>
         </div>
       </div>
+      <ChatPanel
+        v-if="conference.chat.value && conference.currentRoom.value"
+        :chat="conference.chat.value"
+        :room-name="conference.currentRoom.value"
+      />
     </div>
 
     <footer class="room-controls">
@@ -203,15 +212,16 @@
         @toggle-screen-share="handleToggleScreenShare"
       />
     </footer>
-    <ChatPanel
-      v-if="conference.chat.value && conference.currentRoom.value"
-      :chat="conference.chat.value"
-      :room-name="conference.currentRoom.value"
-    />
   </section>
 </template>
 
 <style scoped>
+  .main-container {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    height: 100%;
+    overflow: hidden;
+  }
   .screen-share-container {
     flex: 1;
     display: flex;
@@ -395,6 +405,10 @@
 
   /* Responsive adjustments */
   @media (max-width: 768px) {
+    .main-container {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 200px;
+    }
     .video-grid {
       padding: 8px;
       gap: 4px;
