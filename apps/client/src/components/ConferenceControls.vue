@@ -72,6 +72,7 @@
   }
 
   const handleToggleScreenShare = () => {
+    localPresenting.value = !localPresenting.value
     emit('toggle-screen-share')
   }
 </script>

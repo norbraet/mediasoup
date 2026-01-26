@@ -16,7 +16,7 @@ import type {
 } from '../types/types'
 import { useChat } from './useChat'
 import { createChatSocketApi } from '../services/chatSocketApi'
-import { shallowRef } from 'vue'
+import { shallowRef, ref } from 'vue'
 
 export function useConferenceRoom() {
   const socket = useSocket()
@@ -39,12 +39,20 @@ export function useConferenceRoom() {
   let consumer: ReturnType<typeof useConsumer> | null = null
   const chat = shallowRef<UseChat | null>(null)
 
-  // Create a computed property that returns the chat instance or null
-  // const chat = computed(() => chat)
+  // Screen share as separate client
+  const screenShareSocket = useSocket()
+  let screenShareProducer: ReturnType<typeof useProducer> | null = null
+  const isScreenShareActive = ref(false)
+  let currentUserName = ''
+  let currentRoomName = ''
 
   const joinRoom = async (userName: string, roomName: string) => {
     console.groupCollapsed('join-room')
     try {
+      // Store current user and room for screen share
+      currentUserName = userName
+      currentRoomName = roomName
+
       // Connect to server if not connected
       if (!socket.isConnected.value) {
         await socket.connect()
@@ -114,6 +122,11 @@ export function useConferenceRoom() {
       socket.getSocket().off('participant-video-changed')
       socket.getSocket().off('participant-audio-changed')
 
+      // Cleanup screen share
+      if (isScreenShareActive.value) {
+        stopScreenShare()
+      }
+
       // Cleanup chat
       chat.value?.cleanupChatListeners()
       chat.value?.clearMessages()
@@ -155,14 +168,138 @@ export function useConferenceRoom() {
   }
 
   const toggleScreenShare = async () => {
-    if (!producer) return
-
-    if (!media.isScreenSharing.value) {
-      const stream = await media.startScreenShare()
-      await producer.startScreenShare(stream)
+    if (isScreenShareActive.value) {
+      // Stop screen share by leaving the screen share client
+      await stopScreenShare()
     } else {
-      producer.stopScreenShare()
-      media.stopScreenShare()
+      // Start screen share by joining as a separate client
+      await startScreenShare()
+    }
+  }
+
+  const startScreenShare = async () => {
+    try {
+      // Connect screen share socket if not connected
+      if (!screenShareSocket.isConnected.value) {
+        await screenShareSocket.connect()
+      }
+
+      // Get screen share media first
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: 'monitor',
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+        },
+        audio: false, // No audio for screen share
+      })
+
+      console.log(
+        'Screen share stream tracks:',
+        screenStream.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled }))
+      )
+
+      // Join room as screen share client
+      const screenShareUserName = `${currentUserName} - Screen Share`
+      const joinResp = await screenShareSocket.getSocket().emitWithAck('join-room', {
+        userName: screenShareUserName,
+        roomName: currentRoomName,
+      })
+
+      if (!joinResp.success) {
+        throw new Error(joinResp.error || 'Failed to join room as screen share client')
+      }
+
+      // Create screen share producer
+      const screenShareSignalingApi = createProducerSignalingApi(screenShareSocket.getSocket())
+      const screenShareEventApi = createProducerSocketApi(screenShareSocket.getSocket())
+
+      // Create a minimal media state for screen share (video only)
+      const screenShareMediaState = {
+        isAudioMuted: ref(true), // Always muted for screen share
+        isVideoEnabled: ref(true),
+        toggleAudioTrack: () => {}, // No audio toggle for screen share
+        toggleVideoTrack: () => {},
+      }
+
+      screenShareProducer = useProducer(
+        screenShareSignalingApi,
+        screenShareEventApi,
+        screenShareMediaState
+      )
+
+      // Create device for screen share
+      const screenShareDevice = new Device()
+      await screenShareDevice.load({ routerRtpCapabilities: joinResp.routerCapabilities })
+
+      // Set up screen share transport
+      await screenShareProducer.requestProducerTransport(screenShareDevice)
+
+      // Manually create video producer for screen share (video only)
+      if (!screenShareProducer.producerTransport.value) {
+        throw new Error('Screen share producer transport not ready')
+      }
+
+      const videoTrack = screenStream.getVideoTracks()[0]
+      if (!videoTrack) {
+        throw new Error('No video track in screen share stream')
+      }
+
+      console.log('Creating screen share video producer...')
+      const transport = screenShareProducer.producerTransport.value as any
+      const producer = await transport.produce({ track: videoTrack })
+
+      // Store the producer reference (we'll need to clean it up)
+      screenShareProducer.videoProducer.value = producer
+
+      console.log('Screen share producer created:', producer.id)
+
+      // Handle screen share ending (when user stops via browser UI)
+      videoTrack.addEventListener('ended', () => {
+        console.log('Screen share ended by user')
+        stopScreenShare()
+      })
+
+      isScreenShareActive.value = true
+      media.isScreenSharing.value = true
+      media.screenStream.value = screenStream
+
+      console.log('Screen share started successfully')
+    } catch (error) {
+      console.error('Failed to start screen share:', error)
+      await stopScreenShare() // Clean up on error
+      throw error
+    }
+  }
+
+  const stopScreenShare = async () => {
+    try {
+      if (screenShareSocket.isConnected.value) {
+        screenShareSocket.getSocket().emit('leave-room')
+      }
+
+      // Cleanup screen share producer
+      if (screenShareProducer?.videoProducer.value) {
+        screenShareProducer.videoProducer.value.close()
+      }
+      if (screenShareProducer?.producerTransport.value) {
+        screenShareProducer.producerTransport.value.close()
+      }
+      screenShareProducer = null
+
+      // Stop screen share media
+      if (media.screenStream.value) {
+        media.screenStream.value.getTracks().forEach((track) => track.stop())
+      }
+
+      isScreenShareActive.value = false
+      media.isScreenSharing.value = false
+      media.screenStream.value = null
+
+      console.log('Screen share stopped')
+    } catch (error) {
+      console.error('Error stopping screen share:', error)
     }
   }
 
@@ -176,6 +313,7 @@ export function useConferenceRoom() {
     toggleAudio,
     toggleVideo,
     toggleScreenShare,
+    isScreenShareActive,
     chat,
   }
 }

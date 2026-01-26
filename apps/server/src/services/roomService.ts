@@ -135,6 +135,19 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
       const recentSpeakers = activeSpeakerList.slice(0, limit)
       const result = [...recentSpeakers]
 
+      // Add screen share clients first (they should be visible)
+      const screenShareClients = allClientIds.filter((id) => {
+        const client = clients.get(id)
+        return client && client.userName.includes(' - Screen Share')
+      })
+
+      // Add screen share clients that aren't already in result
+      screenShareClients.forEach((screenShareId) => {
+        if (!result.includes(screenShareId)) {
+          result.push(screenShareId)
+        }
+      })
+
       // Fill remaining slots with other participants
       const remaining = limit - result.length
 

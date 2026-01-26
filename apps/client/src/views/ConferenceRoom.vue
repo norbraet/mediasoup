@@ -19,36 +19,8 @@
   const userName = (Math.random() + 1).toString(36).substring(7)
   const initalsUserName = userName.slice(0, 2).toUpperCase()
   const localVideoRef = ref<HTMLVideoElement>()
-  const screenShareRef = ref<HTMLVideoElement>()
   const isActuallyMuted = computed(
     () => !conference.isAudioEnabled.value || conference.isAudioMuted.value
-  )
-
-  watch(
-    screenShareRef,
-    (videoElement) => {
-      if (videoElement && conference.screenStream.value) {
-        videoElement.srcObject = conference.screenStream.value
-        videoElement.play().catch((e) => console.debug('Screen share video play failed:', e))
-      }
-    },
-    { immediate: true }
-  )
-
-  // Watch for screen stream changes
-  watch(
-    () => conference.screenStream.value,
-    (stream) => {
-      if (stream && screenShareRef.value) {
-        screenShareRef.value.srcObject = stream
-        screenShareRef.value
-          .play()
-          .catch((e) => console.debug('Screen share video play failed:', e))
-      } else if (screenShareRef.value) {
-        screenShareRef.value.srcObject = null
-      }
-    },
-    { immediate: true }
   )
 
   watch(
@@ -81,7 +53,14 @@
     return conference.participants.value.size + 1 // Always include local participant
   })
 
-  // Use video grid composable for dynamic layout
+  // Check if screen sharing is active
+  const hasScreenShare = computed(() => {
+    return Array.from(conference.participants.value.values()).some((participant) =>
+      participant.userName.includes(' - Screen Share')
+    )
+  })
+
+  // Use video grid composable for dynamic layout (only when no screen share)
   const { gridConfig } = useVideoGrid(totalParticipants)
 
   const handleToggleVideo = async (isNowVideoOff: boolean) => {
@@ -138,20 +117,67 @@
       <LanguageSwitcher />
     </header>
 
-    <div v-if="conference.isScreenSharing.value" class="screen-share-container">
-      <div class="screen-share-header">
-        <h3>{{ displayName }} {{ t('room.screenShare.sharing') }}</h3>
-        <button class="stop-share-btn" @click="handleToggleScreenShare">
-          {{ t('room.screenShare.stop') }}
-        </button>
-      </div>
-      <video ref="screenShareRef" autoplay playsinline class="screen-share-video" />
-    </div>
-
     <div class="main-container">
+      <!-- Screen Share Layout -->
+      <div v-if="hasScreenShare" class="screen-share-layout">
+        <!-- Main Screen Share Area -->
+        <div class="screen-share-main">
+          <div
+            v-for="participant in Array.from(conference.participants.value.values())"
+            v-show="participant.userName.includes(' - Screen Share')"
+            :key="participant.userId"
+            class="screen-share-video"
+          >
+            <RemoteParticipant :participant="participant" />
+          </div>
+        </div>
+
+        <!-- Participants Thumbnails Row -->
+        <div class="participants-thumbnails">
+          <!-- Local Video Thumbnail -->
+          <div class="thumbnail-slot">
+            <div class="video-container">
+              <video
+                ref="localVideoRef"
+                autoplay
+                playsinline
+                muted
+                class="participant-video"
+                :style="{
+                  display:
+                    conference.localStream.value && conference.isVideoEnabled.value
+                      ? 'block'
+                      : 'none',
+                }"
+              />
+              <div
+                v-if="!conference.localStream.value || !conference.isVideoEnabled.value"
+                class="no-video-placeholder"
+              >
+                <p class="placeholder-text">{{ initalsUserName }}</p>
+              </div>
+              <div class="participant-label">{{ displayName }}</div>
+            </div>
+          </div>
+
+          <!-- Remote Participants Thumbnails (exclude screen share) -->
+          <div
+            v-for="participant in Array.from(conference.participants.value.values()).filter(
+              (p) => !p.userName.includes(' - Screen Share')
+            )"
+            :key="participant.userId"
+            class="thumbnail-slot"
+            :class="{ 'active-speaker': participant.isActiveSpeaker }"
+          >
+            <RemoteParticipant :participant="participant" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Regular Grid Layout (no screen share) -->
       <div
+        v-else
         class="video-grid"
-        :class="{ 'with-screen-share': conference.isScreenSharing.value }"
         :style="{
           '--grid-columns': gridConfig.columns,
           '--grid-rows': gridConfig.rows,
@@ -163,7 +189,9 @@
           v-for="participant in Array.from(conference.participants.value.values())"
           :key="participant.userId"
           class="video-slot"
-          :class="{ 'active-speaker': participant.isActiveSpeaker }"
+          :class="{
+            'active-speaker': participant.isActiveSpeaker,
+          }"
         >
           <RemoteParticipant :participant="participant" />
         </div>
@@ -206,7 +234,7 @@
         v-if="conference.currentRoom && !conference.joinError.value"
         :is-muted="isActuallyMuted"
         :is-video-off="!conference.isVideoEnabled"
-        :is-presenting="conference.isScreenSharing.value"
+        :is-presenting="conference.isScreenShareActive.value"
         @toggle-video="handleToggleVideo"
         @toggle-audio="handleToggleAudio"
         @toggle-screen-share="handleToggleScreenShare"
@@ -221,55 +249,6 @@
     grid-template-columns: 1fr 350px;
     height: 100%;
     overflow: hidden;
-  }
-  .screen-share-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-    background: #000;
-  }
-
-  .screen-share-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 8px;
-    margin-bottom: 12px;
-  }
-
-  .screen-share-header h3 {
-    margin: 0;
-    color: white;
-    font-size: 1rem;
-    font-weight: 500;
-  }
-
-  .stop-share-btn {
-    background: #ea4335;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.2s;
-  }
-
-  .stop-share-btn:hover {
-    background: #d33b2c;
-  }
-
-  .screen-share-video {
-    flex: 1;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #000;
-    border-radius: 8px;
   }
 
   .conference-room {
@@ -307,16 +286,6 @@
     min-height: 0; /* Allow grid to shrink */
   }
 
-  .video-grid.with-screen-share {
-    /* When screen sharing is active, make video grid smaller */
-    display: flex;
-    flex: 0 0 200px;
-    padding: 8px;
-    gap: 4px;
-    /* Force single row for participants when screen sharing */
-    grid-template-rows: 1fr;
-  }
-
   .video-slot {
     width: 100%;
     height: 100%;
@@ -324,10 +293,6 @@
     min-height: 0;
     aspect-ratio: var(--aspect-ratio);
     max-height: 100%;
-  }
-
-  .video-grid.with-screen-share .video-slot {
-    width: auto;
   }
 
   .video-container {
@@ -387,6 +352,103 @@
     animation: activeSpeakerPulse 2s infinite;
   }
 
+  /* ===== SCREEN SHARE LAYOUT ===== */
+  .screen-share-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .screen-share-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .screen-share-video {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .screen-share-video .video-container {
+    border: 3px solid #1976d2;
+    box-shadow: 0 0 20px rgba(25, 118, 210, 0.4);
+    animation: screenShareGlow 3s ease-in-out infinite;
+  }
+
+  .screen-share-video .participant-video {
+    transform: none;
+    object-fit: contain;
+  }
+
+  .screen-share-video .participant-label {
+    background: rgba(25, 118, 210, 0.9);
+    color: white;
+    font-weight: 600;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  /* Participants Thumbnails Row */
+  .participants-thumbnails {
+    display: flex;
+    gap: 8px;
+    height: 120px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 0;
+    flex-shrink: 0;
+  }
+
+  .thumbnail-slot {
+    flex: 0 0 160px;
+    height: 100%;
+    min-width: 160px;
+  }
+
+  .thumbnail-slot .video-container {
+    border: 2px solid #3d3d3d;
+    border-radius: 8px;
+  }
+
+  .thumbnail-slot .participant-video {
+    border-radius: 6px;
+  }
+
+  .thumbnail-slot .participant-label {
+    font-size: 10px;
+    padding: 2px 6px;
+    bottom: 4px;
+    left: 4px;
+  }
+
+  .thumbnail-slot .no-video-placeholder .placeholder-text {
+    font-size: 2rem;
+  }
+
+  .thumbnail-slot.active-speaker .video-container {
+    border: 2px solid #34a853;
+    box-shadow: 0 0 8px rgba(52, 168, 83, 0.3);
+  }
+
+  /* Screen share glowing effect */
+  @keyframes screenShareGlow {
+    0%,
+    100% {
+      box-shadow: 0 0 20px rgba(25, 118, 210, 0.4);
+      border-color: #1976d2;
+    }
+    50% {
+      box-shadow: 0 0 28px rgba(25, 118, 210, 0.6);
+      border-color: #2196f3;
+    }
+  }
+
   @keyframes activeSpeakerPulse {
     0%,
     100% {
@@ -394,6 +456,27 @@
     }
     50% {
       box-shadow: 0 0 20px rgba(52, 168, 83, 0.6);
+    }
+  }
+
+  /* Mobile adjustments for screen share layout */
+  @media (max-width: 768px) {
+    .screen-share-layout {
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .participants-thumbnails {
+      height: 80px;
+    }
+
+    .thumbnail-slot {
+      flex: 0 0 100px;
+      min-width: 100px;
+    }
+
+    .thumbnail-slot .no-video-placeholder .placeholder-text {
+      font-size: 1.5rem;
     }
   }
 
@@ -412,28 +495,6 @@
     .video-grid {
       padding: 8px;
       gap: 4px;
-    }
-
-    .video-grid.with-screen-share {
-      flex: 0 0 150px;
-    }
-
-    .screen-share-container {
-      padding: 8px;
-    }
-
-    .screen-share-header {
-      padding: 8px 12px;
-      margin-bottom: 8px;
-    }
-
-    .screen-share-header h3 {
-      font-size: 0.9rem;
-    }
-
-    .stop-share-btn {
-      padding: 6px 12px;
-      font-size: 12px;
     }
 
     .room-header {

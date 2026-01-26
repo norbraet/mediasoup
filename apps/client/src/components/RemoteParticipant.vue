@@ -6,7 +6,10 @@
     participant: RoomParticipant
   }>()
 
-  const initalParticipantsUserName = props.participant.userName.slice(0, 2).toUpperCase()
+  const isScreenShare = props.participant.userName.includes(' - Screen Share')
+  const initalParticipantsUserName = isScreenShare
+    ? '📺' // Screen icon for screen share
+    : props.participant.userName.slice(0, 2).toUpperCase()
   const videoRef = ref<HTMLVideoElement>()
   const audioRef = ref<HTMLAudioElement>()
   const isAudioActive = ref(false)
@@ -93,17 +96,27 @@
       <div class="placeholder-text">{{ initalParticipantsUserName }}</div>
     </div>
     <div class="participant-label">{{ participant.userName }}</div>
-    <div v-if="isAudioActive" class="audio-indicator active">
+    <!-- Only show audio indicators for non-screen-share participants -->
+    <div v-if="!isScreenShare && isAudioActive" class="audio-indicator active">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path
           d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"
         />
       </svg>
     </div>
-    <div v-else class="audio-indicator muted">
+    <div v-else-if="!isScreenShare" class="audio-indicator muted">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path
           d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 9.01 10.28v.43c0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3zM11.98 5.17c-.06-.06-.15-.11-.22-.11-.22 0-.4.18-.4.4v1.19l5.3 5.3c.26-.6.37-1.23.37-1.95v-6c0-1.66-1.34-3-3-3-.17 0-.33.02-.49.05z"
+        />
+      </svg>
+    </div>
+
+    <!-- Screen share indicator -->
+    <div v-if="isScreenShare" class="screen-share-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"
         />
       </svg>
     </div>
@@ -129,6 +142,12 @@
     height: 100%;
     object-fit: cover;
     border-radius: 8px;
+  }
+
+  /* Don't mirror screen share video */
+  .video-container:has(.screen-share-badge) .participant-video {
+    object-fit: contain;
+    transform: none;
   }
 
   .participant-label {
@@ -185,5 +204,24 @@
   .placeholder-text {
     font-size: 8rem;
     opacity: 0.8;
+  }
+
+  .screen-share-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: white;
+    background: rgba(52, 168, 83, 0.8);
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .screen-share-badge svg {
+    width: 16px;
+    height: 16px;
   }
 </style>

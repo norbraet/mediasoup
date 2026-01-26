@@ -96,7 +96,14 @@ const handleJoinRoom =
   ): Promise<void> => {
     try {
       const { userName, roomName } = data
+      // Check if this is a screen share client
+      const isScreenShare = userName.includes(' - Screen Share')
       const client = clientService.createClient(socket, userName)
+
+      // Mark screen share clients for special handling if needed
+      if (isScreenShare) {
+        console.debug('📺 Screen share client joining:', userName)
+      }
 
       // Get or create room (room has the router)
       let room = roomService.getRoomByName(roomName)
@@ -193,46 +200,65 @@ const handleRequestTransport =
         })
       } else if (type === 'consumer') {
         if (!audioProducerId) {
-          console.error(
-            `❌ Consumer transport request missing audioProducerId for ${client.userName}`
-          )
-          acknowledgement({ success: false, error: 'Audio producer ID required for consumer' })
-          return
-        }
-        const audioProducerClient = clientService.getClientByProducerId(audioProducerId)
-        if (!audioProducerClient) {
-          console.error(`❌ Audio producer ${audioProducerId} not found for ${client.userName}`)
-          acknowledgement({ success: false, error: 'Audio producer not found' })
+          console.error(`❌ Consumer transport request missing producerId for ${client.userName}`)
+          acknowledgement({ success: false, error: 'Producer ID required for consumer' })
           return
         }
 
-        if (audioProducerClient.roomId !== client.roomId) {
-          acknowledgement({ success: false, error: 'Audio producer not in same room' })
+        // Find the producer client by any producer ID (could be audio or video)
+        const producerClient = clientService.getClientByProducerId(audioProducerId)
+        if (!producerClient) {
+          console.error(`❌ Producer ${audioProducerId} not found for ${client.userName}`)
+          acknowledgement({ success: false, error: 'Producer not found' })
           return
         }
 
-        const audioProducer = audioProducerClient.producers.get(audioProducerId)
-        if (!audioProducer || audioProducer.kind !== 'audio') {
-          acknowledgement({ success: false, error: 'Invalid audio producer' })
+        if (producerClient.roomId !== client.roomId) {
+          acknowledgement({ success: false, error: 'Producer not in same room' })
           return
         }
 
+        // Get the actual producer (could be audio or video)
+        const producer = producerClient.producers.get(audioProducerId)
+        if (!producer) {
+          acknowledgement({ success: false, error: 'Invalid producer' })
+          return
+        }
+
+        // For screen share clients (video-only), we need to handle them specially
+        const isScreenShare = producerClient.userName.includes(' - Screen Share')
+        let actualAudioProducerId: string | null = null
         let videoProducerId: string | null = null
-        for (const [producerId, producer] of audioProducerClient.producers) {
-          if (producer.kind === 'video') {
-            videoProducerId = producerId
-            break
+
+        if (isScreenShare) {
+          // Screen share clients only have video
+          videoProducerId = producer.kind === 'video' ? producer.id : null
+        } else {
+          // Regular clients - use the provided audioProducerId and find video
+          actualAudioProducerId = producer.kind === 'audio' ? producer.id : null
+          for (const [producerId, prod] of producerClient.producers) {
+            if (prod.kind === 'video') {
+              videoProducerId = producerId
+              break
+            }
           }
         }
 
-        const recentSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
-        if (!recentSpeakers.includes(audioProducerClient.socketId)) {
-          acknowledgement({ success: false, error: 'Producer not in recent speakers' })
-          return
+        // For regular clients, check if they're in recent speakers
+        if (!isScreenShare) {
+          const recentSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
+          if (!recentSpeakers.includes(producerClient.socketId)) {
+            acknowledgement({ success: false, error: 'Producer not in recent speakers' })
+            return
+          }
         }
 
         const { transport, clientTransportParams } = await createWebRtcTransport(room.router)
-        client.addConsumerTransport(transport, audioProducerId, videoProducerId)
+        client.addConsumerTransport(
+          transport,
+          actualAudioProducerId || audioProducerId,
+          videoProducerId
+        )
 
         acknowledgement({
           success: true,
@@ -274,14 +300,17 @@ const handleConnectTransport =
         if (!audioProducerId) {
           acknowledgement({
             success: false,
-            error: 'Audio producer ID required for consumer transport',
+            error: 'Producer ID required for consumer transport',
           })
           return
         }
 
         let targetTransport: types.WebRtcTransport | null = null
         for (const [, transportData] of client.consumerTransports) {
-          if (transportData.associatedAudioProducerId === audioProducerId) {
+          if (
+            transportData.associatedAudioProducerId === audioProducerId ||
+            transportData.associatedVideoProducerId === audioProducerId
+          ) {
             targetTransport = transportData.transport
             break
           }
@@ -290,7 +319,7 @@ const handleConnectTransport =
         if (!targetTransport) {
           acknowledgement({
             success: false,
-            error: 'Consumer transport not found for the given audioProducerId',
+            error: 'Consumer transport not found for the given producerId',
           })
           return
         }
@@ -330,44 +359,72 @@ const handleStartProducing =
 
     // TODO: Check if this is still needed
     if (parameters.kind === 'audio') {
-      room.addProducerToActiveSpeaker(producer)
+      // Don't add screen share clients to active speaker tracking
+      const isScreenShare = client.userName.includes(' - Screen Share')
+      if (!isScreenShare) {
+        room.addProducerToActiveSpeaker(producer)
+      } else {
+        console.debug('📺 Screen share client - not adding to active speaker observer')
+      }
     } else {
       console.debug(`📹 This is VIDEO producer - not adding to active speaker observer`)
     }
 
-    const newTransportsByPeer = await updateActiveSpeakers(room, socket, clientService)
+    // For screen share clients (video-only), we need to notify all other clients directly
+    const isScreenShare = client.userName.includes(' - Screen Share')
+    if (isScreenShare && parameters.kind === 'video') {
+      console.log('🖥️ Screen share video producer created, notifying all clients')
 
-    for (const [socketId, audioProducerIds] of Object.entries(newTransportsByPeer)) {
-      const speakerData: RecentSpeakerData[] = []
-
-      for (const audioProducerId of audioProducerIds) {
-        const producerClient = clientService.getClientByProducerId(audioProducerId)
-        if (!producerClient) {
-          console.warn(`Producer client not found for audioProducerId: ${audioProducerId}`)
-          continue
-        }
-
-        let videoProducerId: string | null = null
-        for (const [producerId, producer] of producerClient.producers) {
-          if (producer.kind === 'video') {
-            videoProducerId = producerId
-            break
-          }
-        }
-
-        speakerData.push({
-          audioProducerId,
-          videoProducerId,
-          userName: producerClient.userName,
-          userId: producerClient.socketId,
-        })
+      // Create speaker data for the screen share client
+      const screenShareSpeakerData: RecentSpeakerData = {
+        audioProducerId: null, // Screen share has no audio
+        videoProducerId: producer.id,
+        userName: client.userName,
+        userId: client.socketId,
       }
 
-      socket.to(socketId).emit('new-producer-to-consume', {
+      // Notify all other clients about the screen share
+      socket.to(room.name).emit('new-producer-to-consume', {
         routerRtpCapabilities: room.router.rtpCapabilities,
-        recentSpeakersData: speakerData,
+        recentSpeakersData: [screenShareSpeakerData],
         activeSpeakerList: room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER),
       })
+    } else {
+      // Regular audio/video producer logic
+      const newTransportsByPeer = await updateActiveSpeakers(room, socket, clientService)
+
+      for (const [socketId, audioProducerIds] of Object.entries(newTransportsByPeer)) {
+        const speakerData: RecentSpeakerData[] = []
+
+        for (const audioProducerId of audioProducerIds) {
+          const producerClient = clientService.getClientByProducerId(audioProducerId)
+          if (!producerClient) {
+            console.warn(`Producer client not found for audioProducerId: ${audioProducerId}`)
+            continue
+          }
+
+          let videoProducerId: string | null = null
+          for (const [producerId, producer] of producerClient.producers) {
+            if (producer.kind === 'video') {
+              videoProducerId = producerId
+              break
+            }
+          }
+
+          speakerData.push({
+            audioProducerId,
+            videoProducerId,
+            userName: producerClient.userName,
+            userId: producerClient.socketId,
+          })
+        }
+
+        socket.to(socketId).emit('new-producer-to-consume', {
+          routerRtpCapabilities: room.router.rtpCapabilities,
+          recentSpeakersData: speakerData,
+          activeSpeakerList: room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER),
+        })
+      }
     }
 
     acknowledgement({ success: true, id: producer.id })

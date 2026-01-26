@@ -12,7 +12,7 @@ export function useConsumer(
   const requestConsumerTransports = async (speakers: SpeakerData[], device: types.Device) => {
     for (const speaker of speakers) {
       try {
-        // Skip participants without producers
+        // Skip participants without any producers
         if (!speaker.audioProducerId && !speaker.videoProducerId) {
           participants.value.set(speaker.userId, {
             userId: speaker.userId,
@@ -28,8 +28,10 @@ export function useConsumer(
         }
 
         // 1️⃣ Request consumer transport from server
-        const transportResp = await consumerApi.requestConsumerTransport(speaker.audioProducerId)
-        const transport = createConsumerTransport(transportResp, speaker.audioProducerId, device)
+        // For screen share clients, use videoProducerId as the primary key
+        const primaryProducerId = speaker.audioProducerId || speaker.videoProducerId!
+        const transportResp = await consumerApi.requestConsumerTransport(primaryProducerId)
+        const transport = createConsumerTransport(transportResp, primaryProducerId, device)
         consumerTransports.value.set(speaker.userId, transport)
 
         // 2️⃣ Consume audio/video
@@ -170,7 +172,7 @@ export function useConsumer(
       }
       error?: string
     },
-    audioProducerId: string,
+    primaryProducerId: string,
     device: types.Device
   ) => {
     if (!device) throw new Error('No device found to create Consumer Transport')
@@ -187,7 +189,7 @@ export function useConsumer(
 
     consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
       try {
-        await consumerApi.connectConsumerTransport(dtlsParameters, audioProducerId)
+        await consumerApi.connectConsumerTransport(dtlsParameters, primaryProducerId)
         callback()
       } catch (error) {
         console.error('Error connecting consumer transport:', error)
