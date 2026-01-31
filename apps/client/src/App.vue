@@ -1,12 +1,10 @@
 <script setup lang="ts">
-  /* import BaseMediaSoup from './components/BaseMediaSoup.vue' */
   /* import I18nExample from './components/I18nExample.vue' */
   import ConferenceRoom from './views/ConferenceRoom.vue'
 </script>
 
 <template>
   <main>
-    <!-- <BaseMediaSoup /> -->
     <ConferenceRoom room-name="Test Room" />
     <!-- <I18nExample /> -->
   </main>
