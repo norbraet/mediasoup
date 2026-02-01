@@ -4,6 +4,7 @@ import { Socket } from 'socket.io'
 import type {
   ConnectTransportResponse,
   ConsumeMediaResponse,
+  JoinRoomRequest,
   JoinRoomResponse,
   RecentSpeakerData,
   RequestTransportResponse,
@@ -123,10 +124,7 @@ export type StartConsumingAck = (response: StartProducingResponse) => void // TO
 export type ResumeConsumerAck = (response: ResumeConsumerResponse) => void
 export type ConsumeMediaAck = (response: ConsumeMediaResponse) => void
 export interface RoomHandlers {
-  [SOCKET_EVENTS.JOIN_ROOM]: (
-    data: { userName: string; roomName: string },
-    ack: JoinRoomAck
-  ) => Promise<void>
+  [SOCKET_EVENTS.JOIN_ROOM]: (data: JoinRoomRequest, ack: JoinRoomAck) => Promise<void>
   [SOCKET_EVENTS.REQUEST_TRANSPORT]: (
     data: { type: RoleType; audioProducerId?: string },
     ack: RequestTransportAck

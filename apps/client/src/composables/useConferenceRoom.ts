@@ -17,7 +17,7 @@ import type {
 import { useChat } from './useChat'
 import { createChatSocketApi } from '../services/chatSocketApi'
 import { shallowRef, ref } from 'vue'
-import { SOCKET_EVENTS, type JoinRoomResponse } from '@mediasoup/types'
+import { SOCKET_EVENTS, type JoinRoomRequest, type JoinRoomResponse } from '@mediasoup/types'
 import type { RtpCapabilities } from 'mediasoup-client/types'
 
 export function useConferenceRoom() {
@@ -65,9 +65,10 @@ export function useConferenceRoom() {
       // Join the room and get router capabilities
       console.debug('Joining room...')
       // TODO: TYPES join-room
+      const payload: JoinRoomRequest = { userName: userName, roomId: roomName }
       const joinResp: JoinRoomResponse = await socket
         .getSocket()
-        .emitWithAck(SOCKET_EVENTS.JOIN_ROOM, { userName, roomName })
+        .emitWithAck(SOCKET_EVENTS.JOIN_ROOM, payload)
       console.debug(SOCKET_EVENTS.JOIN_ROOM, ' - resp :>> ', joinResp)
 
       if (!joinResp.success) {
@@ -209,10 +210,13 @@ export function useConferenceRoom() {
       // Join room as screen share client
       const screenShareUserName = `${currentUserName} - Screen Share`
       // TODO: TYPES join-room
-      const joinResp = await screenShareSocket.getSocket().emitWithAck(SOCKET_EVENTS.JOIN_ROOM, {
+      const payload: JoinRoomRequest = {
         userName: screenShareUserName,
-        roomName: currentRoomName,
-      })
+        roomId: currentRoomName,
+      }
+      const joinResp = await screenShareSocket
+        .getSocket()
+        .emitWithAck(SOCKET_EVENTS.JOIN_ROOM, payload)
 
       if (!joinResp.success) {
         throw new Error(joinResp.error || 'Failed to join room as screen share client')

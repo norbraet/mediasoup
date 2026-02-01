@@ -11,3 +11,15 @@ export interface ClientTransportParams {
   iceCandidates: unknown
   dtlsParameters: unknown
 }
+
+export interface UserInfo {
+  userId: string
+  userName: string
+  socketId?: string
+}
+
+export interface ClientState {
+  audioEnabled: boolean
+  videoEnabled: boolean
+  screenSharing: boolean
+}

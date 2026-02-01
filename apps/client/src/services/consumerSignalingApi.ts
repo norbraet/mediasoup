@@ -4,8 +4,11 @@ import type { ConsumerSignalingApi } from '../types/types'
 import {
   Role,
   SOCKET_EVENTS,
+  type ConnectTransportData,
   type ConnectTransportResponse,
+  type ConsumeMediaData,
   type ConsumeMediaResponse,
+  type RequestTransportData,
   type RequestTransportResponse,
 } from '@mediasoup/types'
 
@@ -13,12 +16,10 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
   return {
     async requestConsumerTransport(audioProducerId: string) {
       // TODO: TYPES request-transport
+      const payload: RequestTransportData = { type: Role.Consumer, audioProducerId }
       const resp: RequestTransportResponse = await socket.emitWithAck(
         SOCKET_EVENTS.REQUEST_TRANSPORT,
-        {
-          type: Role.Consumer,
-          audioProducerId,
-        }
+        payload
       )
       if (!resp.success) {
         throw new Error(resp.error || 'Failed to request consumer transport')
@@ -34,7 +35,7 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
       // TODO: TYPES consume-media
       const resp: ConsumeMediaResponse = await socket.emitWithAck(
         SOCKET_EVENTS.CONSUME_MEDIA,
-        params
+        params satisfies ConsumeMediaData
       )
       return resp
     },
@@ -46,13 +47,10 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
 
     async connectConsumerTransport(dtlsParameters: types.DtlsParameters, audioProducerId: string) {
       // TODO: TYPES connect-transport
+      const payload: ConnectTransportData = { dtlsParameters, type: Role.Consumer, audioProducerId }
       const resp: ConnectTransportResponse = await socket.emitWithAck(
         SOCKET_EVENTS.CONNECT_TRANSPORT,
-        {
-          dtlsParameters,
-          type: Role.Consumer,
-          audioProducerId,
-        }
+        payload
       )
       if (!resp.success) {
         throw new Error(resp.error || 'Failed to connect consumer transport')

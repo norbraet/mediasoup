@@ -1,3 +1,5 @@
+import { RoleType } from '../mediasoup'
+
 export const SOCKET_EVENTS = {
   // Room events
   JOIN_ROOM: 'join-room',
@@ -25,6 +27,11 @@ export interface RecentSpeakerData {
   videoProducerId: string | null
   userName: string
   userId: string
+}
+
+export interface JoinRoomRequest {
+  roomId: string
+  userName: string
 }
 
 export interface JoinRoomResponseSuccess {
@@ -92,4 +99,40 @@ export type SendChatMessageData = {
   roomId: string
   message: string
   timestamp: number
+}
+
+// Transport Data
+export interface RequestTransportData {
+  type: RoleType
+  audioProducerId?: string
+}
+
+// TODO: connect-transport - Missing correct server usage
+export interface ConnectTransportData {
+  dtlsParameters: unknown
+  type: RoleType
+  audioProducerId?: string
+}
+
+// TODO: start-producing - Missing correct server usage
+export interface StartProducingData {
+  kind: string
+  rtpParameters: unknown
+  appData?: Record<string, unknown>
+}
+
+// TODO: consume-media - Missing correct server usage
+export interface ConsumeMediaData {
+  producerId: string
+  rtpCapabilities: unknown
+  kind: string
+}
+
+// Audio/Video State
+export interface AudioMutedData {
+  isAudioMuted: boolean
+}
+
+export interface VideoToggledData {
+  isVideoEnabled: boolean
 }

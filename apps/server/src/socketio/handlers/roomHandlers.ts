@@ -19,10 +19,14 @@ import { updateActiveSpeakers } from '../../services/activeSpeakerService'
 import { createActiveSpeakerManager } from '../../services/activeSpeakerManager'
 import { getClientRoomContext } from '../../services/getClientRoomService'
 import {
+  AudioMutedData,
   ChatMessage,
+  JoinRoomRequest,
+  RequestTransportData,
   Role,
   SendChatMessageData,
   SOCKET_EVENTS,
+  VideoToggledData,
   type RecentSpeakerData,
   type RoleType,
 } from '@mediasoup/types'
@@ -103,12 +107,9 @@ const handleJoinRoom =
     clientService: ClientService,
     activeSpeakerManager: ActiveSpeakerManager
   ) =>
-  async (
-    data: { userName: string; roomName: string },
-    acknowledgement: JoinRoomAck
-  ): Promise<void> => {
+  async (data: JoinRoomRequest, acknowledgement: JoinRoomAck): Promise<void> => {
     try {
-      const { userName, roomName } = data
+      const { userName, roomId } = data
       // Check if this is a screen share client
       const isScreenShare = userName.includes(' - Screen Share')
       const client = clientService.createClient(socket, userName)
@@ -119,14 +120,14 @@ const handleJoinRoom =
       }
 
       // Get or create room (room has the router)
-      let room = roomService.getRoomByName(roomName)
+      let room = roomService.getRoomByName(roomId)
       if (!room) {
-        room = await roomService.createRoom(roomName, clientService, socket)
+        room = await roomService.createRoom(roomId, clientService, socket)
         activeSpeakerManager.setupActiveSpeakerHandling(room)
       }
 
       room.addClient(client)
-      socket.join(roomName)
+      socket.join(roomId)
 
       const recentSpeakersData = room
         .getAllParticipantsForNewJoiner(env.MAX_VISIBLE_ACTIVE_SPEAKER)
@@ -167,7 +168,7 @@ const handleJoinRoom =
       // Notify existing participants about the new joiner
       // They will need this info to create consumer transports when the new joiner starts producing
       // TODO: TYPES user-joined
-      socket.to(roomName).emit('user-joined', {
+      socket.to(roomId).emit('user-joined', {
         userId: client.socketId,
         userName: client.userName,
       })
@@ -183,10 +184,7 @@ const handleJoinRoom =
 // TODO: TYPES request-transport
 const handleRequestTransport =
   (socket: Socket, roomService: RoomService, clientService: ClientService) =>
-  async (
-    data: { type: RoleType; audioProducerId?: string },
-    acknowledgement: RequestTransportAck
-  ): Promise<void> => {
+  async (data: RequestTransportData, acknowledgement: RequestTransportAck): Promise<void> => {
     try {
       const ctx = getClientRoomContext(socket, clientService, roomService)
       if (!ctx) {
@@ -452,7 +450,7 @@ const handleStartProducing =
 // TODO: TYPES video-toggled
 const handleVideoToggled =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
-  (data: { isVideoEnabled: boolean }): void => {
+  (data: VideoToggledData): void => {
     try {
       const ctx = getClientRoomContext(socket, clientService, roomService)
       if (!ctx) return
@@ -484,7 +482,7 @@ const handleVideoToggled =
 // TODO: TYPES audio-muted
 const handleAudioMuted =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
-  (data: { isAudioMuted: boolean }): void => {
+  (data: AudioMutedData): void => {
     try {
       const ctx = getClientRoomContext(socket, clientService, roomService)
       if (!ctx) return
