@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "A university assignment built with mediasoup, Express.js, and Vue. This project demonstrates a multi-user room with camera and screen sharing, voice chat, file sharing, and text chat. Prototype only—created for learning purposes, not production-ready.",
   "scripts": {
-    "dev": "concurrently --names \"🖥️  SERVER,🌐 CLIENT\" --prefix-colors \"blue.bold,green.bold\" --kill-others-on-fail \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "npm run build:types && concurrently --names \"🖥️  SERVER,🌐 CLIENT\" --prefix-colors \"blue.bold,green.bold\" --kill-others-on-fail \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "npm --workspace=@mediasoup/client run dev",
     "dev:server": "npm --workspace=@mediasoup/server run dev",
     "build": "npm -ws run build",
+    "build:types": "npm run build --workspace=@mediasoup/types",
     "lint": "eslint . --ext .ts,.vue,.js,.mjs",
     "lint:fix": "eslint . --ext .ts,.vue,.js,.mjs --fix",
     "lint:staged": "eslint --ext .ts,.vue,.js,.mjs",
