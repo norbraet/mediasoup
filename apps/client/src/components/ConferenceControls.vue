@@ -197,8 +197,8 @@
   /* Mobile responsive */
   @media (max-width: 768px) {
     .main-controls {
-      gap: 8px;
-      padding: 12px 16px;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
     }
 
     .control-btn {

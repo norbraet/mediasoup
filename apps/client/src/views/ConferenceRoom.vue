@@ -248,7 +248,7 @@
     display: grid;
     grid-template-columns: 1fr 350px;
     height: 100%;
-    overflow: hidden;
+    overflow: scroll;
   }
 
   .conference-room {
@@ -278,8 +278,8 @@
     display: grid;
     grid-template-columns: repeat(var(--grid-columns), 1fr);
     grid-template-rows: repeat(var(--grid-rows), 1fr);
-    gap: 8px;
-    padding: 16px;
+    gap: 0.5rem;
+    padding: 1rem;
     flex: 1;
     align-items: center;
     justify-items: center;
@@ -367,6 +367,7 @@
     align-items: center;
     justify-content: center;
     min-height: 0;
+    gap: 1rem;
   }
 
   .screen-share-video {
@@ -397,7 +398,7 @@
   /* Participants Thumbnails Row */
   .participants-thumbnails {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
     height: 120px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -462,8 +463,8 @@
   /* Mobile adjustments for screen share layout */
   @media (max-width: 768px) {
     .screen-share-layout {
-      gap: 8px;
-      padding: 8px;
+      gap: 0.5rem;
+      padding: 0.5rem;
     }
 
     .participants-thumbnails {
@@ -493,8 +494,8 @@
       grid-template-rows: 1fr 200px;
     }
     .video-grid {
-      padding: 8px;
-      gap: 4px;
+      padding: 0.5rem;
+      gap: 0.25rem;
     }
 
     .room-header {
