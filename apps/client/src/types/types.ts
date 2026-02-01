@@ -21,24 +21,20 @@ export interface CurrentProducer {
   userId: string
 }
 export interface UseConferenceRoom {
-  // Room State
   currentRoom: Readonly<Ref<string | null>>
   participants: Ref<Map<string, RoomParticipant>>
   isJoining: Readonly<Ref<boolean>>
   joinError: Readonly<Ref<string | null>>
 
-  // WebRTC state
   device: DeepReadonly<Ref<types.Device | null>>
   isDeviceReady: Readonly<Ref<boolean>>
   routerCapabilities: DeepReadonly<Ref<types.RtpCapabilities | null>>
   currentProducers: DeepReadonly<Ref<CurrentProducer[]>>
 
-  // Socket state
   isConnected: Readonly<Ref<boolean>>
   isConnecting: Readonly<Ref<boolean>>
   socket: ReturnType<typeof useSocket>
 
-  // Media State
   localStream: DeepReadonly<Ref<MediaStream | null>>
   localVideoRef: Ref<HTMLVideoElement | undefined>
   isVideoEnabled: Readonly<Ref<boolean>>
@@ -47,7 +43,6 @@ export interface UseConferenceRoom {
   isGettingMedia: Readonly<Ref<boolean>>
   mediaError: Readonly<Ref<string | null>>
 
-  // Actions
   joinRoom(userName: string, roomName: string): Promise<void>
   leaveRoom(): void
   startAudio(): Promise<void>
@@ -95,7 +90,6 @@ export interface ConsumerSignalingApi {
   off(event: string, listener?: (...args: any[]) => void): void
 }
 
-// Chat types
 export interface ChatSocketApi {
   sendChatMessage(data: SendChatMessageData): void
   onChatMessage(callback: (message: ChatMessage) => void): void

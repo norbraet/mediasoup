@@ -12,7 +12,6 @@
   const currentLocale = ref(getCurrentLocale())
   const availableLocales = getAvailableLocales()
 
-  // Function to flatten nested object with dot notation keys
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function flattenObject(obj: any, prefix = ''): Record<string, string> {
     const flattened: Record<string, string> = {}
@@ -32,7 +31,6 @@
     return flattened
   }
 
-  // Get all translation keys dynamically
   const allTranslations = computed(() => {
     const result: Record<string, Record<string, string>> = {}
 
@@ -44,7 +42,6 @@
     return result
   })
 
-  // Get all unique translation keys
   const allKeys = computed(() => {
     const keys = new Set<string>()
 
@@ -55,18 +52,15 @@
     return Array.from(keys).sort()
   })
 
-  // Update current locale when language changes
   const updateCurrentLocale = () => {
     currentLocale.value = getCurrentLocale()
   }
 
-  // Handle clearing stored locale
   const handleClearLocale = () => {
     clearStoredLocale()
     updateCurrentLocale()
   }
 
-  // Watch for locale changes (simple polling approach)
   setInterval(updateCurrentLocale, 100)
 </script>
 

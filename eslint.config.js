@@ -7,15 +7,10 @@ import prettierConfig from 'eslint-config-prettier'
 import globals from 'globals'
 
 export default [
-  // Global ignore patterns
   {
     ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.vite/**', '**/coverage/**'],
   },
-
-  // Base JavaScript configuration
   js.configs.recommended,
-
-  // TypeScript configuration for server and types packages
   {
     files: ['apps/server/**/*.ts', 'packages/types/**/*.ts'],
     languageOptions: {
@@ -44,8 +39,6 @@ export default [
       'no-console': 'off',
     },
   },
-
-  // TypeScript files in client (non-Vue)
   {
     files: ['apps/client/**/*.ts'],
     languageOptions: {
@@ -70,8 +63,6 @@ export default [
       'prefer-const': 'error',
     },
   },
-
-  // Vue 3 recommended configuration
   ...vuePlugin.configs['flat/recommended'],
   {
     files: ['apps/client/**/*.vue'],
@@ -103,7 +94,5 @@ export default [
       'prefer-const': 'error',
     },
   },
-
-  // Prettier integration
   prettierConfig,
 ]

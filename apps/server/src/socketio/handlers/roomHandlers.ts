@@ -66,26 +66,22 @@ const handleLeaveRoom =
       if (!ctx) return
       const { client, room } = ctx
 
-      // Remove client from room FIRST (this handles ActiveSpeakerObserver cleanup while producers still exist)
       room.removeClient(client.socketId)
 
       socket.leave(room.name)
       clientService.removeClient(client.socketId)
-      // THEN close all transports (this will destroy the producers)
       if (client.producerTransport) client.producerTransport.close()
 
       for (const [, transportData] of client.consumerTransports) {
         transportData.transport.close()
       }
 
-      // Notify other participants that user left
       // TODO: TYPES user-left
       socket.to(room.name).emit('user-left', {
         userId: client.socketId,
         userName: client.userName,
       })
 
-      // If room is empty, clean it up
       if (room.clients.size === 0) {
         room.router.close()
         roomService.removeRoom(room.id)
@@ -110,16 +106,13 @@ const handleJoinRoom =
   async (data: JoinRoomRequest, acknowledgement: JoinRoomAck): Promise<void> => {
     try {
       const { userName, roomId } = data
-      // Check if this is a screen share client
       const isScreenShare = userName.includes(' - Screen Share')
       const client = clientService.createClient(socket, userName)
 
-      // Mark screen share clients for special handling if needed
       if (isScreenShare) {
         console.debug('📺 Screen share client joining:', userName)
       }
 
-      // Get or create room (room has the router)
       let room = roomService.getRoomByName(roomId)
       if (!room) {
         room = await roomService.createRoom(roomId, clientService, socket)
@@ -165,8 +158,6 @@ const handleJoinRoom =
         recentSpeakersData,
       })
 
-      // Notify existing participants about the new joiner
-      // They will need this info to create consumer transports when the new joiner starts producing
       // TODO: TYPES user-joined
       socket.to(roomId).emit('user-joined', {
         userId: client.socketId,
@@ -195,7 +186,6 @@ const handleRequestTransport =
       const { type, audioProducerId } = data
 
       if (type === Role.Producer) {
-        // Check if client already has a producer transport to prevent duplicates
         if (client.producerTransport) {
           acknowledgement({
             success: true,
@@ -218,7 +208,6 @@ const handleRequestTransport =
           return
         }
 
-        // Find the producer client by any producer ID (could be audio or video)
         const producerClient = clientService.getClientByProducerId(audioProducerId)
         if (!producerClient) {
           console.error(`❌ Producer ${audioProducerId} not found for ${client.userName}`)
@@ -231,23 +220,19 @@ const handleRequestTransport =
           return
         }
 
-        // Get the actual producer (could be audio or video)
         const producer = producerClient.producers.get(audioProducerId)
         if (!producer) {
           acknowledgement({ success: false, error: 'Invalid producer' })
           return
         }
 
-        // For screen share clients (video-only), we need to handle them specially
         const isScreenShare = producerClient.userName.includes(' - Screen Share')
         let actualAudioProducerId: string | null = null
         let videoProducerId: string | null = null
 
         if (isScreenShare) {
-          // Screen share clients only have video
           videoProducerId = producer.kind === 'video' ? producer.id : null
         } else {
-          // Regular clients - use the provided audioProducerId and find video
           actualAudioProducerId = producer.kind === 'audio' ? producer.id : null
           for (const [producerId, prod] of producerClient.producers) {
             if (prod.kind === 'video') {
@@ -257,7 +242,6 @@ const handleRequestTransport =
           }
         }
 
-        // For regular clients, check if they're in recent speakers
         if (!isScreenShare) {
           const recentSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
           if (!recentSpeakers.includes(producerClient.socketId)) {
@@ -374,7 +358,6 @@ const handleStartProducing =
 
     // TODO: Check if this is still needed
     if (parameters.kind === 'audio') {
-      // Don't add screen share clients to active speaker tracking
       const isScreenShare = client.userName.includes(' - Screen Share')
       if (!isScreenShare) {
         room.addProducerToActiveSpeaker(producer)
@@ -385,12 +368,10 @@ const handleStartProducing =
       console.debug(`📹 This is VIDEO producer - not adding to active speaker observer`)
     }
 
-    // For screen share clients (video-only), we need to notify all other clients directly
     const isScreenShare = client.userName.includes(' - Screen Share')
     if (isScreenShare && parameters.kind === 'video') {
       console.log('🖥️ Screen share video producer created, notifying all clients')
 
-      // Create speaker data for the screen share client
       const screenShareSpeakerData: RecentSpeakerData = {
         audioProducerId: null, // Screen share has no audio
         videoProducerId: producer.id,
@@ -398,7 +379,6 @@ const handleStartProducing =
         userId: client.socketId,
       }
 
-      // Notify all other clients about the screen share
       // TODO: TYPES new-producer-to-consume
       socket.to(room.name).emit('new-producer-to-consume', {
         routerRtpCapabilities: room.router.rtpCapabilities,
@@ -406,7 +386,6 @@ const handleStartProducing =
         activeSpeakerList: room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER),
       })
     } else {
-      // Regular audio/video producer logic
       const newTransportsByPeer = await updateActiveSpeakers(room, socket, clientService)
 
       for (const [socketId, audioProducerIds] of Object.entries(newTransportsByPeer)) {
@@ -634,13 +613,11 @@ const handleChatMessage =
       }
       const { client, room } = ctx
 
-      // Validate message
       if (!data.message || typeof data.message !== 'string' || data.message.trim().length === 0) {
         console.warn('Invalid chat message from client:', client.socketId)
         return
       }
 
-      // Validate roomId matches
       if (data.roomId !== room.name) {
         console.warn('Chat message roomId mismatch:', {
           expected: room.name,
@@ -649,7 +626,6 @@ const handleChatMessage =
         return
       }
 
-      // Create the message to broadcast
       const chatMessage: ChatMessage = {
         userId: client.socketId,
         userName: client.userName,
@@ -657,7 +633,6 @@ const handleChatMessage =
         timestamp: data.timestamp || Date.now(),
       }
 
-      // Broadcast to all clients in the room (including sender)
       // TODO: TYPES chat-message
       socket.to(room.name).emit('chat-message', chatMessage)
       socket.emit('chat-message', chatMessage) // Echo back to sender for consistency

@@ -19,7 +19,6 @@
   const iconSize = 24
   const { t } = useTypedI18n()
 
-  // Local reactive state for immediate UI feedback
   const localMuted = ref(props.isMuted ?? false)
   const localVideoOff = ref(props.isVideoOff ?? false)
   const localPresenting = ref(props.isPresenting ?? false)
@@ -28,7 +27,6 @@
   const isDisplayMediaAvailable = () =>
     navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices ? true : false
 
-  // Watch for prop changes to sync with parent
   watch(
     () => props.isMuted,
     (newValue) => {
@@ -61,7 +59,6 @@
     { immediate: true }
   )
 
-  // Click handlers
   const handleToggleAudio = () => {
     emit('toggle-audio')
   }

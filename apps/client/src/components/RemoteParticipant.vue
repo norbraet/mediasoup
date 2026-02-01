@@ -8,7 +8,7 @@
 
   const isScreenShare = props.participant.userName.includes(' - Screen Share')
   const initalParticipantsUserName = isScreenShare
-    ? '📺' // Screen icon for screen share
+    ? '📺'
     : props.participant.userName.slice(0, 2).toUpperCase()
   const videoRef = ref<HTMLVideoElement>()
   const audioRef = ref<HTMLAudioElement>()
@@ -17,8 +17,8 @@
 
   const tryPlayVideo = () => {
     if (videoRef.value) {
-      videoRef.value.play().catch((_e) => {
-        // console.debug('Autoplay failed, user interaction needed:', e)
+      videoRef.value.play().catch((e) => {
+        console.debug('Autoplay failed, user interaction needed:', e)
       })
     }
   }
@@ -68,7 +68,6 @@
       const videoStream = new MediaStream([props.participant.videoTrack])
       videoRef.value.srcObject = videoStream
 
-      // Try to play the video with multiple attempts
       tryPlayVideo()
       setTimeout(tryPlayVideo, 500)
       setTimeout(tryPlayVideo, 2000)

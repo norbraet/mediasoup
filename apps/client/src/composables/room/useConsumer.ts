@@ -9,11 +9,9 @@ export function useConsumer(
 ) {
   const consumerTransports = ref<Map<string, types.Transport>>(new Map())
 
-  // Called by the composable when joining or when new producers appear
   const requestConsumerTransports = async (speakers: RecentSpeakerData[], device: types.Device) => {
     for (const speaker of speakers) {
       try {
-        // Skip participants without any producers
         if (!speaker.audioProducerId && !speaker.videoProducerId) {
           participants.value.set(speaker.userId, {
             userId: speaker.userId,
@@ -28,14 +26,11 @@ export function useConsumer(
           continue
         }
 
-        // Request consumer transport from server
-        // For screen share clients, use videoProducerId as the primary key
         const primaryProducerId = speaker.audioProducerId || speaker.videoProducerId!
         const transportResp = await consumerApi.requestConsumerTransport(primaryProducerId)
         const transport = createConsumerTransport(transportResp, primaryProducerId, device)
         consumerTransports.value.set(speaker.userId, transport)
 
-        // 2️⃣ Consume audio/video
         const [audioConsumer, videoConsumer] = await Promise.all([
           consume(transport, speaker.audioProducerId, device, 'audio'),
           consume(transport, speaker.videoProducerId, device, 'video'),
@@ -65,7 +60,6 @@ export function useConsumer(
   ): Promise<types.Consumer | undefined> => {
     if (!producerId) return
 
-    // Use the correct API to consume media
     const consumerParams = await consumerApi.consumeMedia({
       rtpCapabilities: device.rtpCapabilities,
       producerId,
@@ -83,7 +77,6 @@ export function useConsumer(
     return consumer
   }
 
-  // Listeners for dynamic events
   const setupDynamicConsumerListeners = (device: types.Device) => {
     // TODO: TYPES new-producer-to-consume
     consumerApi.on(
@@ -96,7 +89,6 @@ export function useConsumer(
         console.log('New producers to consume:', data.recentSpeakersData)
         await requestConsumerTransports(data.recentSpeakersData, device)
 
-        // Update video flags for participants who just started producing
         for (const speaker of data.recentSpeakersData) {
           const participant = participants.value.get(speaker.userId)
           if (participant) {
@@ -134,7 +126,6 @@ export function useConsumer(
     // TODO: TYPES user-left
     consumerApi.on('user-left', (data: { userId: string; userName: string }) => {
       console.log('User left:', data.userName, data.userId)
-      // Clean up transport for this user
       const transport = consumerTransports.value.get(data.userId)
       if (transport) {
         transport.close()

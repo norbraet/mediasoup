@@ -33,13 +33,11 @@
     { immediate: true }
   )
 
-  // Debug: Watch for stream changes
   watch(
     () => conference.localStream.value,
     (stream) => {
       if (stream && localVideoRef.value) {
         localVideoRef.value.srcObject = stream
-        // Force play if needed
         localVideoRef.value.play().catch((e) => console.debug('Video play failed (normal):', e))
       }
     },
@@ -48,19 +46,16 @@
 
   const displayName = userName + ' (You)'
 
-  // Calculate total participants (remote + local - always include local slot)
   const totalParticipants = computed(() => {
     return conference.participants.value.size + 1 // Always include local participant
   })
 
-  // Check if screen sharing is active
   const hasScreenShare = computed(() => {
     return Array.from(conference.participants.value.values()).some((participant) =>
       participant.userName.includes(' - Screen Share')
     )
   })
 
-  // Use video grid composable for dynamic layout (only when no screen share)
   const { gridConfig } = useVideoGrid(totalParticipants)
 
   const handleToggleVideo = async (isNowVideoOff: boolean) => {
@@ -77,11 +72,9 @@
 
   const handleToggleAudio = async () => {
     try {
-      // If no stream exists and we want to enable audio, start audio-only mode
       if (!conference.localStream.value && !conference.isAudioMuted.value) {
         await conference.startAudio()
       } else {
-        // Toggle existing audio
         conference.toggleAudio()
       }
     } catch (error) {

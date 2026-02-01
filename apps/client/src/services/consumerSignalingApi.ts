@@ -83,7 +83,6 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
       socket.emit('user-left', { userId, userName })
     },
 
-    // Helper to subscribe to server events from the composable
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, listener: (...args: any[]) => void) {
       socket.on(event, listener)

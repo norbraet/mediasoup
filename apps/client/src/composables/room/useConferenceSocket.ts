@@ -19,7 +19,6 @@ export function useConferenceSocket(socket: Socket) {
     }
     joined.value = true
 
-    // Initialize participants map with current users from server
     if (resp.participants) {
       for (const participant of resp.participants) {
         roomParticipants.value.set(participant.userId, participant)
@@ -33,7 +32,6 @@ export function useConferenceSocket(socket: Socket) {
     // TODO: TYPES leave-room
     socket.emit(SOCKET_EVENTS.LEAVE_ROOM)
 
-    // Cleanup
     joined.value = false
     roomParticipants.value.clear()
   }

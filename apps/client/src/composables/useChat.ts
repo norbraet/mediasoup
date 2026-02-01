@@ -1,4 +1,3 @@
-// useChat.ts
 import { onUnmounted, ref } from 'vue'
 import type { ChatSocketApi, UseChat } from '../types/types'
 import type { ChatMessage, SendChatMessageData } from '@mediasoup/types'
@@ -10,17 +9,14 @@ export function useChat(chatApi: ChatSocketApi): UseChat {
     messages.value.push(message)
   }
 
-  // Setup listeners
   const setupChatListeners = () => {
     chatApi.onChatMessage(handleIncomingMessage)
   }
 
-  // Cleanup listeners
   const cleanupChatListeners = () => {
     chatApi.offChatMessage(handleIncomingMessage)
   }
 
-  // Send message
   const sendMessage = (roomId: string, messageText: string) => {
     if (!messageText.trim()) return
     if (!roomId) {

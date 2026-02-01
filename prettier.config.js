@@ -1,6 +1,5 @@
 /** @type {import("prettier").Config} */
 export default {
-  // Core formatting options
   semi: false,
   singleQuote: true,
   quoteProps: 'as-needed',
@@ -9,11 +8,7 @@ export default {
   useTabs: false,
   printWidth: 100,
   endOfLine: 'lf',
-
-  // Vue-specific options
   vueIndentScriptAndStyle: true,
-
-  // Override specific file types
   overrides: [
     {
       files: '*.json',

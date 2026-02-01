@@ -1,22 +1,15 @@
 import { RoleType } from '../mediasoup'
 
 export const SOCKET_EVENTS = {
-  // Room events
   JOIN_ROOM: 'join-room',
   LEAVE_ROOM: 'leave-room',
-
-  // Transport events
   REQUEST_TRANSPORT: 'request-transport',
   CONNECT_TRANSPORT: 'connect-transport',
-
-  // Media events
   START_PRODUCING: 'start-producing',
   CONSUME_MEDIA: 'consume-media',
   UNPAUSE_CONSUMER: 'unpause-consumer',
   AUDIO_MUTED: 'audio-muted',
   VIDEO_TOGGLED: 'video-toggled',
-
-  // Chat events
   CHAT_MESSAGE: 'chat-message',
 } as const
 
@@ -101,7 +94,6 @@ export type SendChatMessageData = {
   timestamp: number
 }
 
-// Transport Data
 export interface RequestTransportData {
   type: RoleType
   audioProducerId?: string
@@ -128,7 +120,6 @@ export interface ConsumeMediaData {
   kind: string
 }
 
-// Audio/Video State
 export interface AudioMutedData {
   isAudioMuted: boolean
 }

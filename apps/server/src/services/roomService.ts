@@ -1,11 +1,9 @@
-// Rooms are not a part of the concept of Mediasoup. Mediasoup itself cares about mediastreams, transports and things like that
 import { types } from 'mediasoup'
 import type { Client, Room, RoomService, WorkerPoolService } from '../types'
 import { mediasoupConfig as msc } from '../config/config'
 import env from '../config/env'
 
 async function createRoom(roomName: string, workerPool: WorkerPoolService): Promise<Room> {
-  // Create a new mediasoup service for this room (with its own router)
   const worker = workerPool.getWorkerForRoom(roomName)
   const router = await worker.createRouter({
     mediaCodecs: msc.router.mediaCodecs,
@@ -13,7 +11,7 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
   const activeSpeakerObserver = await router.createActiveSpeakerObserver({ interval: 300 }) // 300ms is the default value
   const clients = new Map<string, Client>()
 
-  const activeSpeakerList = new Array<string>() // A array of id's with the most recent dominant speaker first
+  const activeSpeakerList = new Array<string>()
   const roomId = roomName
 
   activeSpeakerObserver.on('dominantspeaker', (dominantSpeaker) => {
@@ -87,7 +85,6 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
         try {
           activeSpeakerObserver.addProducer({ producerId: producer.id })
 
-          // Find the client that owns this producer and add them to activeSpeakerList if not already there
           const client = Array.from(clients.values()).find((client) => {
             const hasProducer = Array.from(client.producers.values()).some(
               (p) => p.id === producer.id
@@ -135,20 +132,17 @@ async function createRoom(roomName: string, workerPool: WorkerPoolService): Prom
       const recentSpeakers = activeSpeakerList.slice(0, limit)
       const result = [...recentSpeakers]
 
-      // Add screen share clients first (they should be visible)
       const screenShareClients = allClientIds.filter((id) => {
         const client = clients.get(id)
         return client && client.userName.includes(' - Screen Share')
       })
 
-      // Add screen share clients that aren't already in result
       screenShareClients.forEach((screenShareId) => {
         if (!result.includes(screenShareId)) {
           result.push(screenShareId)
         }
       })
 
-      // Fill remaining slots with other participants
       const remaining = limit - result.length
 
       if (remaining > 0) {

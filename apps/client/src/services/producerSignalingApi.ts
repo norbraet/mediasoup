@@ -1,4 +1,3 @@
-// conference/producerSignalingApi.ts
 import type { Socket } from 'socket.io-client'
 import type { ProducerSignalingApi } from '../types/types'
 import {

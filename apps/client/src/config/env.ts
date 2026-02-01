@@ -12,7 +12,6 @@ function getServerIP(): string {
       return hostname
     }
   }
-  // Fallback to localhost for development
   return 'localhost'
 }
 
@@ -57,17 +56,15 @@ type Env = z.infer<typeof envSchema> & {
 
 export const env = Object.freeze({
   ..._env.data,
-  // Auto-detected values
   VITE_LOCAL_IP: serverIP,
   VITE_API_URL: `${_env.data.VITE_API_PROTOCOL}://${serverIP}:${_env.data.VITE_API_PORT}`,
   VITE_WS_URL: `${_env.data.VITE_WS_PROTOCOL}://${serverIP}:${_env.data.VITE_API_PORT}`,
 }) satisfies Env
 
-// Development logging
 if (_env.data.VITE_DEBUG) {
-  // console.debug('🔧 Client Environment Configuration:')
-  // console.debug(`   Server IP: ${serverIP}`)
-  // console.debug(`   API URL: ${env.VITE_API_URL}`)
-  // console.debug(`   WebSocket URL: ${env.VITE_WS_URL}`)
-  // console.debug(`   Client Port: ${env.VITE_PORT}`)
+  console.debug('🔧 Client Environment Configuration:')
+  console.debug(`   Server IP: ${serverIP}`)
+  console.debug(`   API URL: ${env.VITE_API_URL}`)
+  console.debug(`   WebSocket URL: ${env.VITE_WS_URL}`)
+  console.debug(`   Client Port: ${env.VITE_PORT}`)
 }

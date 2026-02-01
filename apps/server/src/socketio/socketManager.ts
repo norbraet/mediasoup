@@ -25,22 +25,18 @@ export const initializeSocketIO = (
     // const webrtcHandlers = createWebRTCHandlers(socket, mediasoupService)
     const roomHandlers = createRoomHandlers(socket, roomService, clientService)
 
-    // Combine all handlers
     const allHandlers = {
       // ...webrtcHandlers,
       ...roomHandlers,
     }
 
-    // Register all handlers
     Object.entries(allHandlers).forEach(([event, handler]) => {
       socket.on(event, handler)
     })
 
-    // Handle disconnect - clean up client resources
     socket.on('disconnect', async (reason) => {
       console.debug('Socket disconnected:', socket.id, 'reason:', reason)
 
-      // Use the same cleanup logic as leave-room
       const leaveRoomHandler = allHandlers[SOCKET_EVENTS.LEAVE_ROOM]
       if (leaveRoomHandler) {
         await leaveRoomHandler()

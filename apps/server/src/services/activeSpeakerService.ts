@@ -8,17 +8,15 @@ export const updateActiveSpeakers = async (
   clientService: ClientService
 ): Promise<Record<string, string[]>> => {
   const activeSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
-  const allSpeakers = room.getRecentSpeakers(100) // All speakers
+  const allSpeakers = room.getRecentSpeakers(100)
   const mutedSpeakers = allSpeakers.slice(env.MAX_VISIBLE_ACTIVE_SPEAKER)
   const newTransportsByPeer: Record<string, string[]> = {}
 
   for (const [, client] of room.clients) {
-    // Mute speakers not in top 5
     for (const speakerSocketId of mutedSpeakers) {
       const speakerClient = clientService.getClientBySocketId(speakerSocketId)
       if (!speakerClient) continue
 
-      // If this is the speaker themselves, pause their producers
       if (client.socketId === speakerSocketId) {
         for (const [, producer] of client.producers) {
           if (!producer.paused) {
@@ -28,7 +26,6 @@ export const updateActiveSpeakers = async (
         continue
       }
 
-      // Find and pause consumers for this muted speaker
       for (const [, transportData] of client.consumerTransports) {
         const audioProducerId = transportData.associatedAudioProducerId
         const audioProducerClient = clientService.getClientByProducerId(audioProducerId)
@@ -44,14 +41,12 @@ export const updateActiveSpeakers = async (
       }
     }
 
-    // Resume/create consumers for active speakers
     const newSpeakersToThisClient: string[] = []
 
     for (const speakerSocketId of activeSpeakers) {
       const speakerClient = clientService.getClientBySocketId(speakerSocketId)
       if (!speakerClient) continue
 
-      // If this is the speaker themselves, resume their producers
       if (client.socketId === speakerSocketId) {
         for (const [, producer] of client.producers) {
           if (producer.paused) {
@@ -61,7 +56,6 @@ export const updateActiveSpeakers = async (
         continue
       }
 
-      // Check if client is already consuming this speaker
       let hasConsumer = false
       for (const [, transportData] of client.consumerTransports) {
         const audioProducerId = transportData.associatedAudioProducerId
@@ -69,7 +63,6 @@ export const updateActiveSpeakers = async (
 
         if (audioProducerClient?.socketId === speakerSocketId) {
           hasConsumer = true
-          // Resume existing consumers
           if (transportData.audio?.paused) {
             await transportData.audio.resume()
           }
@@ -80,9 +73,7 @@ export const updateActiveSpeakers = async (
         }
       }
 
-      // If no consumer exists, add to list for new transport creation
       if (!hasConsumer) {
-        // Find the speaker's audio producer ID
         for (const [producerId, producer] of speakerClient.producers) {
           if (producer.kind === 'audio') {
             newSpeakersToThisClient.push(producerId)
@@ -92,13 +83,11 @@ export const updateActiveSpeakers = async (
       }
     }
 
-    // Store new speakers this client needs to consume
     if (newSpeakersToThisClient.length > 0) {
       newTransportsByPeer[client.socketId] = newSpeakersToThisClient
     }
   }
 
-  // Broadcast updated active speakers to all clients in room
   // TODO: TYPES update-active-speakers
   socket.to(room.name).emit('update-active-speakers', activeSpeakers)
 

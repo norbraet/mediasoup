@@ -1,4 +1,3 @@
-// chatSocketApi.ts
 import type { Socket } from 'socket.io-client'
 import type { ChatSocketApi } from '../types/types'
 import type { ChatMessage, SendChatMessageData } from '@mediasoup/types'

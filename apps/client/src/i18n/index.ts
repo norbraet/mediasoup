@@ -3,7 +3,6 @@ import en from './locales/en.json'
 import de from './locales/de.json'
 import type { MessageSchema, AvailableLocale } from './types'
 
-// Available locales for validation (runtime array that matches the AvailableLocale type)
 const AVAILABLE_LOCALES: AvailableLocale[] = ['en', 'de']
 const FALLBACK_LOCALE: AvailableLocale = 'en'
 const LOCALE_STORAGE_KEY = 'vue-i18n-locale'
@@ -12,14 +11,12 @@ const LOCALE_STORAGE_KEY = 'vue-i18n-locale'
  * Get initial locale from localStorage or browser preference
  */
 function getInitialLocale(): AvailableLocale {
-  // Try to get from localStorage first
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as AvailableLocale
     if (stored && AVAILABLE_LOCALES.includes(stored)) {
       return stored
     }
 
-    // Try to get from browser language
     const browserLang = navigator.language.substring(0, 2) as AvailableLocale
     if (AVAILABLE_LOCALES.includes(browserLang)) {
       return browserLang

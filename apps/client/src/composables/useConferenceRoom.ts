@@ -41,7 +41,6 @@ export function useConferenceRoom() {
   let consumer: ReturnType<typeof useConsumer> | null = null
   const chat = shallowRef<UseChat | null>(null)
 
-  // Screen share as separate client
   const screenShareSocket = useSocket()
   let screenShareProducer: ReturnType<typeof useProducer> | null = null
   const isScreenShareActive = ref(false)
@@ -51,18 +50,15 @@ export function useConferenceRoom() {
   const joinRoom = async (userName: string, roomName: string) => {
     console.groupCollapsed(SOCKET_EVENTS.JOIN_ROOM)
     try {
-      // Store current user and room for screen share
       currentUserName = userName
       currentRoomName = roomName
 
-      // Connect to server if not connected
       if (!socket.isConnected.value) {
         await socket.connect()
       }
       room.isJoining.value = true
       room.joinError.value = null
 
-      // Join the room and get router capabilities
       console.debug('Joining room...')
       // TODO: TYPES join-room
       const payload: JoinRoomRequest = { userName: userName, roomId: roomName }
@@ -75,35 +71,28 @@ export function useConferenceRoom() {
         throw new Error(joinResp.error || 'Failed to join room')
       }
 
-      // Create APIs
       producerSignalingApi = createProducerSignalingApi(socket.getSocket())
       producerEventApi = createProducerSocketApi(socket.getSocket())
       consumerSignalingApi = createConsumerSignalingApi(socket.getSocket())
       chatSocketApi = createChatSocketApi(socket.getSocket())
 
-      // Create and load device
       const device = new Device()
       await device.load({ routerRtpCapabilities: joinResp.routerCapabilities as RtpCapabilities })
 
-      // Create producer and consumer
       producer = useProducer(producerSignalingApi, producerEventApi, mediaState)
       consumer = useConsumer(consumerSignalingApi, room.participants)
 
-      // Set up transports and consumers
       await producer.requestProducerTransport(device)
       await consumer.requestConsumerTransports(joinResp.recentSpeakersData, device)
       consumer.setupDynamicConsumerListeners(device)
 
-      // Setup chat
       chat.value = useChat(chatSocketApi)
 
-      // Update room state
       room.currentRoom.value = roomName
     } catch (error) {
       console.error('Failed to join room:', error)
       room.joinError.value = error instanceof Error ? error.message : 'Failed to join room'
 
-      // Cleanup on error
       producer?.resetProducer()
       media.stopAll()
       chat.value?.clearMessages()
@@ -121,7 +110,6 @@ export function useConferenceRoom() {
       // TODO: TYPES leave-room
       socket.getSocket().emit(SOCKET_EVENTS.LEAVE_ROOM)
 
-      // Remove socket listeners
       socket.getSocket().off('new-producer-to-consume')
       socket.getSocket().off('update-active-speakers')
       socket.getSocket().off('user-joined')
@@ -129,17 +117,14 @@ export function useConferenceRoom() {
       socket.getSocket().off('participant-video-changed')
       socket.getSocket().off('participant-audio-changed')
 
-      // Cleanup screen share
       if (isScreenShareActive.value) {
         stopScreenShare()
       }
 
-      // Cleanup chat
       chat.value?.cleanupChatListeners()
       chat.value?.clearMessages()
       chat.value = null
 
-      // Cleanup producer and consumer
       producer?.resetProducer()
       media.stopAll()
       if (consumer) consumer.consumerTransports.value.forEach((transport) => transport.close())
@@ -176,22 +161,18 @@ export function useConferenceRoom() {
 
   const toggleScreenShare = async () => {
     if (isScreenShareActive.value) {
-      // Stop screen share by leaving the screen share client
       await stopScreenShare()
     } else {
-      // Start screen share by joining as a separate client
       await startScreenShare()
     }
   }
 
   const startScreenShare = async () => {
     try {
-      // Connect screen share socket if not connected
       if (!screenShareSocket.isConnected.value) {
         await screenShareSocket.connect()
       }
 
-      // Get screen share media first
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: 'monitor',
@@ -207,7 +188,6 @@ export function useConferenceRoom() {
         screenStream.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled }))
       )
 
-      // Join room as screen share client
       const screenShareUserName = `${currentUserName} - Screen Share`
       // TODO: TYPES join-room
       const payload: JoinRoomRequest = {
@@ -222,11 +202,9 @@ export function useConferenceRoom() {
         throw new Error(joinResp.error || 'Failed to join room as screen share client')
       }
 
-      // Create screen share producer
       const screenShareSignalingApi = createProducerSignalingApi(screenShareSocket.getSocket())
       const screenShareEventApi = createProducerSocketApi(screenShareSocket.getSocket())
 
-      // Create a minimal media state for screen share (video only)
       const screenShareMediaState = {
         isAudioMuted: ref(true), // Always muted for screen share
         isVideoEnabled: ref(true),
@@ -240,14 +218,11 @@ export function useConferenceRoom() {
         screenShareMediaState
       )
 
-      // Create device for screen share
       const screenShareDevice = new Device()
       await screenShareDevice.load({ routerRtpCapabilities: joinResp.routerCapabilities })
 
-      // Set up screen share transport
       await screenShareProducer.requestProducerTransport(screenShareDevice)
 
-      // Manually create video producer for screen share (video only)
       if (!screenShareProducer.producerTransport.value) {
         throw new Error('Screen share producer transport not ready')
       }
@@ -261,12 +236,10 @@ export function useConferenceRoom() {
       const transport = screenShareProducer.producerTransport.value as any
       const producer = await transport.produce({ track: videoTrack })
 
-      // Store the producer reference (we'll need to clean it up)
       screenShareProducer.videoProducer.value = producer
 
       console.log('Screen share producer created:', producer.id)
 
-      // Handle screen share ending (when user stops via browser UI)
       videoTrack.addEventListener('ended', () => {
         console.log('Screen share ended by user')
         stopScreenShare()
@@ -291,7 +264,6 @@ export function useConferenceRoom() {
         screenShareSocket.getSocket().emit(SOCKET_EVENTS.LEAVE_ROOM)
       }
 
-      // Cleanup screen share producer
       if (screenShareProducer?.videoProducer.value) {
         screenShareProducer.videoProducer.value.close()
       }
@@ -300,7 +272,6 @@ export function useConferenceRoom() {
       }
       screenShareProducer = null
 
-      // Stop screen share media
       if (media.screenStream.value) {
         media.screenStream.value.getTracks().forEach((track) => track.stop())
       }

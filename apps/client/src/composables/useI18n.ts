@@ -8,18 +8,15 @@ import { AVAILABLE_LOCALES, LOCALE_STORAGE_KEY } from '../i18n'
  * Automatically persists locale changes to localStorage
  */
 export function useTypedI18n() {
-  // Use global scope - no need to specify type parameters with global schema
   const { t, locale, availableLocales } = useVueI18n({
     inheritLocale: true,
     useScope: 'global',
   })
 
-  // Type-safe locale switching with localStorage persistence
   const setLocale = (newLocale: AvailableLocale): void => {
     if (AVAILABLE_LOCALES.includes(newLocale)) {
       locale.value = newLocale
 
-      // Persist to localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem(LOCALE_STORAGE_KEY, newLocale)
       }
@@ -30,17 +27,14 @@ export function useTypedI18n() {
     }
   }
 
-  // Get current locale with proper typing
   const getCurrentLocale = (): AvailableLocale => {
     return locale.value as AvailableLocale
   }
 
-  // Get available locales with proper typing
   const getAvailableLocales = (): AvailableLocale[] => {
     return AVAILABLE_LOCALES
   }
 
-  // Get stored locale from localStorage
   const getStoredLocale = (): AvailableLocale | null => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as AvailableLocale
@@ -49,7 +43,6 @@ export function useTypedI18n() {
     return null
   }
 
-  // Clear stored locale from localStorage
   const clearStoredLocale = (): void => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(LOCALE_STORAGE_KEY)
@@ -57,7 +50,7 @@ export function useTypedI18n() {
   }
 
   return {
-    t, // This now has full TypeScript autocompletion for keys
+    t,
     setLocale,
     getCurrentLocale,
     getAvailableLocales,

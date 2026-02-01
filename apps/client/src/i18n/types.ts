@@ -1,4 +1,3 @@
-// Define the message schema interface
 export interface MessageSchema {
   common: {
     ok: string
@@ -90,5 +89,4 @@ export interface MessageSchema {
   }
 }
 
-// Create a type for available locales
 export type AvailableLocale = 'en' | 'de'

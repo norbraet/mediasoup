@@ -10,7 +10,6 @@ import { createWorkerPoolService } from './services/workerPoolService'
 async function main(): Promise<void> {
   const app = createApp()
 
-  // Keys were made with mkcert
   const key = fs.readFileSync('./create-cert-key.pem')
   const cert = fs.readFileSync('./create-cert.pem')
   const options = {

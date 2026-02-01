@@ -95,7 +95,6 @@ export function useMediaState() {
       screenStream.value = stream
       isScreenSharing.value = true
 
-      // Auto-stop when user clicks "Stop sharing" in browser UI
       const videoTrack = stream.getVideoTracks()[0]
       if (videoTrack) {
         videoTrack.addEventListener('ended', () => {
@@ -116,12 +115,10 @@ export function useMediaState() {
     const stream = localStream.value
     if (!stream) return
 
-    // Stop audio tracks
     stream.getAudioTracks().forEach((track) => track.stop())
 
     const videoTracks = stream.getVideoTracks()
 
-    // Keep video if present
     localStream.value = videoTracks.length > 0 ? new MediaStream(videoTracks) : null
 
     isAudioEnabled.value = false

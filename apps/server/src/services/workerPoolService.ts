@@ -12,7 +12,6 @@ export async function createWorkerPoolService(): Promise<WorkerPoolService> {
 
   return {
     getWorkerForRoom: (roomName: string): types.Worker => {
-      // Simple hash-based assignment (consistent for same room name)
       // TODO: could refactor it to workers-usage approach, where the worker with the least amount of usage gets used
       const hash = hashString(roomName)
       const workerIndex = hash & workers.length

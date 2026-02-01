@@ -8,10 +8,8 @@ export function createActiveSpeakerManager(
   clientService: ClientService,
   socket: Socket
 ): ActiveSpeakerManager {
-  // Setup event handling for a specific room
   function setupActiveSpeakerHandling(room: Room): void {
     room.activeSpeakerObserver.on('dominantspeaker', async (dominantSpeaker) => {
-      // Find the client who owns this producer
       const client = Array.from(room.clients.values()).find((client) =>
         Array.from(client.producers.values()).some(
           (producer) => producer.id === dominantSpeaker.producer.id
@@ -19,7 +17,6 @@ export function createActiveSpeakerManager(
       )
 
       if (client) {
-        // Update the room's speaker list
         room.updateActiveSpeakerList(client.socketId)
 
         try {

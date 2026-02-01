@@ -4,18 +4,14 @@
   import { computed } from 'vue'
 
   const { setLocale, getAvailableLocales, locale } = useTypedI18n()
-
-  // Use the reactive locale directly from i18n - this will sync across all instances
   const currentLocale = computed(() => locale.value as AvailableLocale)
   const availableLocales = getAvailableLocales()
-
   const handleLanguageChange = (event: Event) => {
     const target = event.target as HTMLSelectElement
     const newLocale = target.value as AvailableLocale
     setLocale(newLocale)
   }
 
-  // Language display names
   const languageNames: Record<AvailableLocale, string> = {
     en: 'English',
     de: 'Deutsch',

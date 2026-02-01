@@ -31,7 +31,6 @@ export function useProducer(
       throw new Error(producerTransportParams.error || 'Failed to request producer transport')
     }
 
-    // If transport already exists on server side, params might not be provided
     if (!producerTransportParams.params) {
       console.debug('Producer transport already exists on server, skipping client setup')
       return
