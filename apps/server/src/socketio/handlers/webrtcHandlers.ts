@@ -3,17 +3,17 @@ import { types } from 'mediasoup'
 import type { MediasoupService } from '../../types'
 import { createClientSession, type ClientSession } from '../../mediasoup/clientSession'
 import type { ClientProducingParams, ClientTransportParams } from '../../types.ts'
-import { RoleType } from '@mediasoup/types'
+import { RoleType, SOCKET_EVENTS } from '@mediasoup/types'
 
 interface WebRTCHandlers {
   getRtpCap: ReturnType<typeof handleGetRtpCapabilities>
   'create-producer-transport': ReturnType<typeof handleCreateProducerTransport>
   'create-consumer-transport': ReturnType<typeof handleCreateConsumerTransport>
-  'connect-transport': ReturnType<typeof handleConnectTransport>
+  [SOCKET_EVENTS.CONNECT_TRANSPORT]: ReturnType<typeof handleConnectTransport>
   'connect-consumer-transport': ReturnType<typeof handleConnectTransport>
-  'start-producing': ReturnType<typeof handleStartProducing>
-  'consume-media': ReturnType<typeof handleConsumeMedia>
-  'unpause-consumer': ReturnType<typeof handleUnpauseConsumer>
+  [SOCKET_EVENTS.START_PRODUCING]: ReturnType<typeof handleStartProducing>
+  [SOCKET_EVENTS.CONSUME_MEDIA]: ReturnType<typeof handleConsumeMedia>
+  [SOCKET_EVENTS.UNPAUSE_CONSUMER]: ReturnType<typeof handleUnpauseConsumer>
   'close-all': ReturnType<typeof handleCloseAll>
   disconnect: () => void
 }
@@ -28,11 +28,11 @@ export function createWebRTCHandlers(
     getRtpCap: handleGetRtpCapabilities(mediasoupService),
     'create-producer-transport': handleCreateProducerTransport(mediasoupService, session),
     'create-consumer-transport': handleCreateConsumerTransport(mediasoupService, session),
-    'connect-transport': handleConnectTransport(session, 'producer'),
+    [SOCKET_EVENTS.CONNECT_TRANSPORT]: handleConnectTransport(session, 'producer'),
     'connect-consumer-transport': handleConnectTransport(session, 'consumer'),
-    'start-producing': handleStartProducing(mediasoupService, session),
-    'consume-media': handleConsumeMedia(mediasoupService, session),
-    'unpause-consumer': handleUnpauseConsumer(session),
+    [SOCKET_EVENTS.START_PRODUCING]: handleStartProducing(mediasoupService, session),
+    [SOCKET_EVENTS.CONSUME_MEDIA]: handleConsumeMedia(mediasoupService, session),
+    [SOCKET_EVENTS.UNPAUSE_CONSUMER]: handleUnpauseConsumer(session),
     'close-all': handleCloseAll(session),
     disconnect: (): void => session.cleanup(),
   }
@@ -110,7 +110,7 @@ const handleStartProducing =
 
       acknowledgement(producer.id)
     } catch (error) {
-      console.error('start-producing', error)
+      console.error(SOCKET_EVENTS.START_PRODUCING, error)
       acknowledgement('error')
     }
   }
@@ -160,7 +160,7 @@ const handleConsumeMedia =
 
       acknowledgement(consumerParams)
     } catch (error) {
-      console.error('consume-media error:', error)
+      console.error(SOCKET_EVENTS.CONSUME_MEDIA, ' error:', error)
       acknowledgement('error')
     }
   }

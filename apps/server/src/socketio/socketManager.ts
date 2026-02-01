@@ -4,6 +4,7 @@ import type { ClientService, RoomService } from '../types'
 // import { createWebRTCHandlers } from './handlers/webrtcHandlers'
 import env from '../config/env'
 import { createRoomHandlers } from './handlers/roomHandlers'
+import { SOCKET_EVENTS } from '@mediasoup/types'
 
 export const initializeSocketIO = (
   httpsServer: Server,
@@ -40,7 +41,7 @@ export const initializeSocketIO = (
       console.debug('Socket disconnected:', socket.id, 'reason:', reason)
 
       // Use the same cleanup logic as leave-room
-      const leaveRoomHandler = allHandlers['leave-room']
+      const leaveRoomHandler = allHandlers[SOCKET_EVENTS.LEAVE_ROOM]
       if (leaveRoomHandler) {
         await leaveRoomHandler()
       }

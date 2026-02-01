@@ -22,6 +22,7 @@ import {
   ChatMessage,
   Role,
   SendChatMessageData,
+  SOCKET_EVENTS,
   type RecentSpeakerData,
   type RoleType,
 } from '@mediasoup/types'
@@ -34,16 +35,21 @@ export function createRoomHandlers(
   const activeSpeakerManager = createActiveSpeakerManager(clientService, socket)
 
   return {
-    'join-room': handleJoinRoom(socket, roomService, clientService, activeSpeakerManager),
-    'leave-room': handleLeaveRoom(socket, roomService, clientService),
-    'request-transport': handleRequestTransport(socket, roomService, clientService),
-    'connect-transport': handleConnectTransport(socket, clientService),
-    'start-producing': handleStartProducing(socket, roomService, clientService),
-    'audio-muted': handleAudioMuted(socket, clientService, roomService),
-    'video-toggled': handleVideoToggled(socket, clientService, roomService),
-    'consume-media': handleConsumeMedia(socket, clientService, roomService),
-    'unpause-consumer': handleUnpauseConsumer(socket, clientService),
-    'chat-message': handleChatMessage(socket, clientService, roomService),
+    [SOCKET_EVENTS.JOIN_ROOM]: handleJoinRoom(
+      socket,
+      roomService,
+      clientService,
+      activeSpeakerManager
+    ),
+    [SOCKET_EVENTS.LEAVE_ROOM]: handleLeaveRoom(socket, roomService, clientService),
+    [SOCKET_EVENTS.REQUEST_TRANSPORT]: handleRequestTransport(socket, roomService, clientService),
+    [SOCKET_EVENTS.CONNECT_TRANSPORT]: handleConnectTransport(socket, clientService),
+    [SOCKET_EVENTS.START_PRODUCING]: handleStartProducing(socket, roomService, clientService),
+    [SOCKET_EVENTS.AUDIO_MUTED]: handleAudioMuted(socket, clientService, roomService),
+    [SOCKET_EVENTS.VIDEO_TOGGLED]: handleVideoToggled(socket, clientService, roomService),
+    [SOCKET_EVENTS.CONSUME_MEDIA]: handleConsumeMedia(socket, clientService, roomService),
+    [SOCKET_EVENTS.UNPAUSE_CONSUMER]: handleUnpauseConsumer(socket, clientService),
+    [SOCKET_EVENTS.CHAT_MESSAGE]: handleChatMessage(socket, clientService, roomService),
   }
 }
 
@@ -85,7 +91,7 @@ const handleLeaveRoom =
         socket.to(room.name).emit('update-active-speakers', activeSpeakers)
       }
     } catch (error) {
-      console.error('❌ leave-room error:', error)
+      console.error('❌ ', SOCKET_EVENTS.LEAVE_ROOM, 'error:', error)
     }
   }
 
@@ -166,7 +172,7 @@ const handleJoinRoom =
         userName: client.userName,
       })
     } catch (error) {
-      console.error('❌ join-room error:', error)
+      console.error('❌', SOCKET_EVENTS.JOIN_ROOM, ' error:', error)
       acknowledgement({
         success: false,
         error: 'Failed to join room',
@@ -275,7 +281,7 @@ const handleRequestTransport =
         })
       }
     } catch (error) {
-      console.error('request-transport error:', error)
+      console.error(SOCKET_EVENTS.REQUEST_TRANSPORT, ' error:', error)
       acknowledgement({
         success: false,
         error: 'Failed to create transport',
@@ -338,8 +344,8 @@ const handleConnectTransport =
         acknowledgement({ success: true })
       }
     } catch (error) {
-      console.error('connect-transport error:', error)
-      acknowledgement({ success: false, error: 'connect-transport Error' })
+      console.error(SOCKET_EVENTS.CONNECT_TRANSPORT, ' error:', error)
+      acknowledgement({ success: false, error: `${SOCKET_EVENTS.CONNECT_TRANSPORT} Error` })
     }
   }
 

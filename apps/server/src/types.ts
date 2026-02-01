@@ -12,6 +12,7 @@ import type {
   SendChatMessageData,
   StartProducingResponse,
 } from '@mediasoup/types'
+import { SOCKET_EVENTS } from '@mediasoup/types'
 
 export type ClientProducingParams = Pick<
   types.ProducerOptions,
@@ -122,16 +123,19 @@ export type StartConsumingAck = (response: StartProducingResponse) => void // TO
 export type ResumeConsumerAck = (response: ResumeConsumerResponse) => void
 export type ConsumeMediaAck = (response: ConsumeMediaResponse) => void
 export interface RoomHandlers {
-  'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
-  'request-transport': (
+  [SOCKET_EVENTS.JOIN_ROOM]: (
+    data: { userName: string; roomName: string },
+    ack: JoinRoomAck
+  ) => Promise<void>
+  [SOCKET_EVENTS.REQUEST_TRANSPORT]: (
     data: { type: RoleType; audioProducerId?: string },
     ack: RequestTransportAck
   ) => Promise<void>
-  'connect-transport': (
+  [SOCKET_EVENTS.CONNECT_TRANSPORT]: (
     data: { dtlsParameters: types.DtlsParameters; type: RoleType; audioProducerId?: string },
     ack: ConnectTransportAck
   ) => Promise<void>
-  'start-producing': (
+  [SOCKET_EVENTS.START_PRODUCING]: (
     parameters: {
       kind: types.MediaKind
       rtpParameters: types.RtpParameters
@@ -139,18 +143,18 @@ export interface RoomHandlers {
     },
     ack: StartProducingAck
   ) => Promise<void>
-  'audio-muted': (data: { isAudioMuted: boolean }) => void
-  'consume-media': (
+  [SOCKET_EVENTS.AUDIO_MUTED]: (data: { isAudioMuted: boolean }) => void
+  [SOCKET_EVENTS.CONSUME_MEDIA]: (
     data: { rtpCapabilities: types.RtpCapabilities; producerId: string; kind: types.MediaKind },
     acknowledgement: ConsumeMediaAck
   ) => Promise<void>
-  'unpause-consumer': (
+  [SOCKET_EVENTS.UNPAUSE_CONSUMER]: (
     data: { producerId: string; kind: types.MediaKind },
     acknowledgement: ResumeConsumerAck
   ) => Promise<void>
-  'leave-room': () => Promise<void>
-  'video-toggled': (data: { isVideoEnabled: boolean }) => void
-  'chat-message': (data: SendChatMessageData) => void
+  [SOCKET_EVENTS.LEAVE_ROOM]: () => Promise<void>
+  [SOCKET_EVENTS.VIDEO_TOGGLED]: (data: { isVideoEnabled: boolean }) => void
+  [SOCKET_EVENTS.CHAT_MESSAGE]: (data: SendChatMessageData) => void
 }
 
 export interface WorkerPoolService {

@@ -1,9 +1,24 @@
-export const Role = {
-  Producer: 'producer',
-  Consumer: 'consumer',
+export const SOCKET_EVENTS = {
+  // Room events
+  JOIN_ROOM: 'join-room',
+  LEAVE_ROOM: 'leave-room',
+
+  // Transport events
+  REQUEST_TRANSPORT: 'request-transport',
+  CONNECT_TRANSPORT: 'connect-transport',
+
+  // Media events
+  START_PRODUCING: 'start-producing',
+  CONSUME_MEDIA: 'consume-media',
+  UNPAUSE_CONSUMER: 'unpause-consumer',
+  AUDIO_MUTED: 'audio-muted',
+  VIDEO_TOGGLED: 'video-toggled',
+
+  // Chat events
+  CHAT_MESSAGE: 'chat-message',
 } as const
 
-export type RoleType = 'producer' | 'consumer'
+export type SocketEvent = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS]
 
 export interface RecentSpeakerData {
   audioProducerId: string | null

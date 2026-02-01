@@ -1,6 +1,7 @@
 import type { Socket } from 'socket.io-client'
 import { ref } from 'vue'
 import type { RoomParticipant } from '../../types/types'
+import { SOCKET_EVENTS } from '@mediasoup/types'
 
 export function useConferenceSocket(socket: Socket) {
   const joined = ref(false)
@@ -8,7 +9,7 @@ export function useConferenceSocket(socket: Socket) {
 
   const joinRoom = async (userName: string, roomName: string) => {
     // TODO: TYPES join-room
-    const resp = await socket.emitWithAck('join-room', { userName, roomName })
+    const resp = await socket.emitWithAck(SOCKET_EVENTS.JOIN_ROOM, { userName, roomName })
     if (!resp.success) {
       throw new Error(resp.error || 'Failed to join room')
     }
@@ -26,7 +27,7 @@ export function useConferenceSocket(socket: Socket) {
 
   const leaveRoom = () => {
     // TODO: TYPES leave-room
-    socket.emit('leave-room')
+    socket.emit(SOCKET_EVENTS.LEAVE_ROOM)
 
     // Cleanup
     joined.value = false

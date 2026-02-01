@@ -17,7 +17,7 @@ import type {
 import { useChat } from './useChat'
 import { createChatSocketApi } from '../services/chatSocketApi'
 import { shallowRef, ref } from 'vue'
-import type { JoinRoomResponse } from '@mediasoup/types'
+import { SOCKET_EVENTS, type JoinRoomResponse } from '@mediasoup/types'
 import type { RtpCapabilities } from 'mediasoup-client/types'
 
 export function useConferenceRoom() {
@@ -49,7 +49,7 @@ export function useConferenceRoom() {
   let currentRoomName = ''
 
   const joinRoom = async (userName: string, roomName: string) => {
-    console.groupCollapsed('join-room')
+    console.groupCollapsed(SOCKET_EVENTS.JOIN_ROOM)
     try {
       // Store current user and room for screen share
       currentUserName = userName
@@ -67,8 +67,8 @@ export function useConferenceRoom() {
       // TODO: TYPES join-room
       const joinResp: JoinRoomResponse = await socket
         .getSocket()
-        .emitWithAck('join-room', { userName, roomName })
-      console.debug('join-room - resp :>> ', joinResp)
+        .emitWithAck(SOCKET_EVENTS.JOIN_ROOM, { userName, roomName })
+      console.debug(SOCKET_EVENTS.JOIN_ROOM, ' - resp :>> ', joinResp)
 
       if (!joinResp.success) {
         throw new Error(joinResp.error || 'Failed to join room')
@@ -118,7 +118,7 @@ export function useConferenceRoom() {
   const leaveRoom = () => {
     if (socket.getSocket() && room.currentRoom.value) {
       // TODO: TYPES leave-room
-      socket.getSocket().emit('leave-room')
+      socket.getSocket().emit(SOCKET_EVENTS.LEAVE_ROOM)
 
       // Remove socket listeners
       socket.getSocket().off('new-producer-to-consume')
@@ -209,7 +209,7 @@ export function useConferenceRoom() {
       // Join room as screen share client
       const screenShareUserName = `${currentUserName} - Screen Share`
       // TODO: TYPES join-room
-      const joinResp = await screenShareSocket.getSocket().emitWithAck('join-room', {
+      const joinResp = await screenShareSocket.getSocket().emitWithAck(SOCKET_EVENTS.JOIN_ROOM, {
         userName: screenShareUserName,
         roomName: currentRoomName,
       })
@@ -284,7 +284,7 @@ export function useConferenceRoom() {
     try {
       if (screenShareSocket.isConnected.value) {
         // TODO: TYPES leave-room
-        screenShareSocket.getSocket().emit('leave-room')
+        screenShareSocket.getSocket().emit(SOCKET_EVENTS.LEAVE_ROOM)
       }
 
       // Cleanup screen share producer

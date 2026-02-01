@@ -3,6 +3,7 @@ import { types } from 'mediasoup-client'
 import type { ConsumerSignalingApi } from '../types/types'
 import {
   Role,
+  SOCKET_EVENTS,
   type ConnectTransportResponse,
   type ConsumeMediaResponse,
   type RequestTransportResponse,
@@ -12,10 +13,13 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
   return {
     async requestConsumerTransport(audioProducerId: string) {
       // TODO: TYPES request-transport
-      const resp: RequestTransportResponse = await socket.emitWithAck('request-transport', {
-        type: Role.Consumer,
-        audioProducerId,
-      })
+      const resp: RequestTransportResponse = await socket.emitWithAck(
+        SOCKET_EVENTS.REQUEST_TRANSPORT,
+        {
+          type: Role.Consumer,
+          audioProducerId,
+        }
+      )
       if (!resp.success) {
         throw new Error(resp.error || 'Failed to request consumer transport')
       }
@@ -28,22 +32,28 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
       kind: string
     }) {
       // TODO: TYPES consume-media
-      const resp: ConsumeMediaResponse = await socket.emitWithAck('consume-media', params)
+      const resp: ConsumeMediaResponse = await socket.emitWithAck(
+        SOCKET_EVENTS.CONSUME_MEDIA,
+        params
+      )
       return resp
     },
 
     async unpauseConsumer(producerId: string, kind: string) {
       // TODO: TYPES unpause-consumer
-      return socket.emitWithAck('unpause-consumer', { producerId, kind })
+      return socket.emitWithAck(SOCKET_EVENTS.UNPAUSE_CONSUMER, { producerId, kind })
     },
 
     async connectConsumerTransport(dtlsParameters: types.DtlsParameters, audioProducerId: string) {
       // TODO: TYPES connect-transport
-      const resp: ConnectTransportResponse = await socket.emitWithAck('connect-transport', {
-        dtlsParameters,
-        type: Role.Consumer,
-        audioProducerId,
-      })
+      const resp: ConnectTransportResponse = await socket.emitWithAck(
+        SOCKET_EVENTS.CONNECT_TRANSPORT,
+        {
+          dtlsParameters,
+          type: Role.Consumer,
+          audioProducerId,
+        }
+      )
       if (!resp.success) {
         throw new Error(resp.error || 'Failed to connect consumer transport')
       }
