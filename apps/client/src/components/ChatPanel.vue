@@ -49,10 +49,33 @@
 
 <style scoped>
   .chat-panel {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow-y: auto;
+  }
+
+  .chat-panel::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    top: 0;
+    height: 1px;
+    background-color: rgba(61, 61, 61, 0.5);
+  }
+
+  /* DESKTOP: vertical separator */
+  @media (min-width: 768px) {
+    .chat-panel::before {
+      top: 1rem;
+      bottom: 1rem;
+      left: 0;
+      right: auto;
+      width: 1px;
+      height: auto;
+    }
   }
 
   /* Scrollable message list */
