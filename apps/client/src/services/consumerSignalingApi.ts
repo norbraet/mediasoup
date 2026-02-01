@@ -1,12 +1,19 @@
 import type { Socket } from 'socket.io-client'
 import { types } from 'mediasoup-client'
 import type { ConsumerSignalingApi } from '../types/types'
+import {
+  Role,
+  type ConnectTransportResponse,
+  type ConsumeMediaResponse,
+  type RequestTransportResponse,
+} from '@mediasoup/types'
 
 export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi {
   return {
     async requestConsumerTransport(audioProducerId: string) {
-      const resp = await socket.emitWithAck('request-transport', {
-        type: 'consumer',
+      // TODO: TYPES request-transport
+      const resp: RequestTransportResponse = await socket.emitWithAck('request-transport', {
+        type: Role.Consumer,
         audioProducerId,
       })
       if (!resp.success) {
@@ -20,18 +27,21 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
       producerId: string
       kind: string
     }) {
-      const resp = await socket.emitWithAck('consume-media', params)
+      // TODO: TYPES consume-media
+      const resp: ConsumeMediaResponse = await socket.emitWithAck('consume-media', params)
       return resp
     },
 
     async unpauseConsumer(producerId: string, kind: string) {
+      // TODO: TYPES unpause-consumer
       return socket.emitWithAck('unpause-consumer', { producerId, kind })
     },
 
     async connectConsumerTransport(dtlsParameters: types.DtlsParameters, audioProducerId: string) {
-      const resp = await socket.emitWithAck('connect-transport', {
+      // TODO: TYPES connect-transport
+      const resp: ConnectTransportResponse = await socket.emitWithAck('connect-transport', {
         dtlsParameters,
-        type: 'consumer',
+        type: Role.Consumer,
         audioProducerId,
       })
       if (!resp.success) {
@@ -41,22 +51,27 @@ export function createConsumerSignalingApi(socket: Socket): ConsumerSignalingApi
     },
 
     updateActiveSpeakers(activeSpeakerIds: string[]) {
+      // TODO: TYPES update-active-speakers
       socket.emit('update-active-speakers', activeSpeakerIds)
     },
 
     participantVideoChanged(userId: string, isVideoEnabled: boolean) {
+      // TODO: TYPES participant-video-changed
       socket.emit('participant-video-changed', { userId, isVideoEnabled })
     },
 
     participantAudioChanged(userId: string, isAudioMuted: boolean) {
+      // TODO: TYPES participant-audio-changed
       socket.emit('participant-audio-changed', { userId, isAudioMuted })
     },
 
     userJoined(userId: string, userName: string) {
+      // TODO: TYPES user-joined
       socket.emit('user-joined', { userId, userName })
     },
 
     userLeft(userId: string, userName: string) {
+      // TODO: TYPES user-left
       socket.emit('user-left', { userId, userName })
     },
 

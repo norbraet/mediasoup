@@ -5,16 +5,12 @@ import {
   RequestTransportAck,
   RoomHandlers,
   RoomService,
-  RoleType,
   ConnectTransportAck,
   StartProducingAck,
-  RecentSpeakerData,
   ConsumeMediaAck,
   ClientConsumeMediaParams,
   ResumeConsumerAck,
   ActiveSpeakerManager,
-  SendChatMessageData,
-  ChatMessage,
 } from '../../types'
 import { createWebRtcTransport } from '../../mediasoup/createWebRtcTransport'
 import { types } from 'mediasoup'
@@ -22,6 +18,13 @@ import env from '../../config/env'
 import { updateActiveSpeakers } from '../../services/activeSpeakerService'
 import { createActiveSpeakerManager } from '../../services/activeSpeakerManager'
 import { getClientRoomContext } from '../../services/getClientRoomService'
+import {
+  ChatMessage,
+  Role,
+  SendChatMessageData,
+  type RecentSpeakerData,
+  type RoleType,
+} from '@mediasoup/types'
 
 export function createRoomHandlers(
   socket: Socket,
@@ -44,6 +47,7 @@ export function createRoomHandlers(
   }
 }
 
+// TODO: TYPES leave-room
 const handleLeaveRoom =
   (socket: Socket, roomService: RoomService, clientService: ClientService) =>
   async (): Promise<void> => {
@@ -65,6 +69,7 @@ const handleLeaveRoom =
       }
 
       // Notify other participants that user left
+      // TODO: TYPES user-left
       socket.to(room.name).emit('user-left', {
         userId: client.socketId,
         userName: client.userName,
@@ -76,6 +81,7 @@ const handleLeaveRoom =
         roomService.removeRoom(room.id)
       } else {
         const activeSpeakers = room.getRecentSpeakers(env.MAX_VISIBLE_ACTIVE_SPEAKER)
+        // TODO: TYPES update-active-speakers
         socket.to(room.name).emit('update-active-speakers', activeSpeakers)
       }
     } catch (error) {
@@ -83,6 +89,7 @@ const handleLeaveRoom =
     }
   }
 
+// TODO: TYPES join-room
 const handleJoinRoom =
   (
     socket: Socket,
@@ -153,6 +160,7 @@ const handleJoinRoom =
 
       // Notify existing participants about the new joiner
       // They will need this info to create consumer transports when the new joiner starts producing
+      // TODO: TYPES user-joined
       socket.to(roomName).emit('user-joined', {
         userId: client.socketId,
         userName: client.userName,
@@ -166,6 +174,7 @@ const handleJoinRoom =
     }
   }
 
+// TODO: TYPES request-transport
 const handleRequestTransport =
   (socket: Socket, roomService: RoomService, clientService: ClientService) =>
   async (
@@ -181,7 +190,7 @@ const handleRequestTransport =
       const { client, room } = ctx
       const { type, audioProducerId } = data
 
-      if (type === 'producer') {
+      if (type === Role.Producer) {
         // Check if client already has a producer transport to prevent duplicates
         if (client.producerTransport) {
           acknowledgement({
@@ -274,6 +283,7 @@ const handleRequestTransport =
     }
   }
 
+// TODO: TYPES connect-transport
 const handleConnectTransport =
   (socket: Socket, clientService: ClientService) =>
   async (
@@ -288,7 +298,7 @@ const handleConnectTransport =
         return
       }
 
-      if (type === 'producer') {
+      if (type === Role.Producer) {
         const transport = client.producerTransport
         if (!transport) {
           acknowledgement({ success: false, error: 'Producer transport not found' })
@@ -333,6 +343,7 @@ const handleConnectTransport =
     }
   }
 
+// TODO: TYPES connect-transport
 const handleStartProducing =
   (socket: Socket, roomService: RoomService, clientService: ClientService) =>
   async (
@@ -384,6 +395,7 @@ const handleStartProducing =
       }
 
       // Notify all other clients about the screen share
+      // TODO: TYPES new-producer-to-consume
       socket.to(room.name).emit('new-producer-to-consume', {
         routerRtpCapabilities: room.router.rtpCapabilities,
         recentSpeakersData: [screenShareSpeakerData],
@@ -419,6 +431,7 @@ const handleStartProducing =
           })
         }
 
+        // TODO: TYPES new-producer-to-consume
         socket.to(socketId).emit('new-producer-to-consume', {
           routerRtpCapabilities: room.router.rtpCapabilities,
           recentSpeakersData: speakerData,
@@ -430,6 +443,7 @@ const handleStartProducing =
     acknowledgement({ success: true, id: producer.id })
   }
 
+// TODO: TYPES video-toggled
 const handleVideoToggled =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
   (data: { isVideoEnabled: boolean }): void => {
@@ -450,6 +464,7 @@ const handleVideoToggled =
       if (data.isVideoEnabled) videoProducer.resume()
       else videoProducer.pause()
 
+      // TODO: TYPES participant-video-changed
       socket.to(room.name).emit('participant-video-changed', {
         userId: client.socketId,
         userName: client.userName,
@@ -460,6 +475,7 @@ const handleVideoToggled =
     }
   }
 
+// TODO: TYPES audio-muted
 const handleAudioMuted =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
   (data: { isAudioMuted: boolean }): void => {
@@ -481,6 +497,7 @@ const handleAudioMuted =
       if (data.isAudioMuted) audioProducer.pause()
       else audioProducer.resume()
 
+      // TODO: TYPES participant-audio-changed
       socket.to(room.name).emit('participant-audio-changed', {
         userId: client.socketId,
         userName: client.userName,
@@ -491,6 +508,7 @@ const handleAudioMuted =
     }
   }
 
+// TODO: TYPES consume-media
 const handleConsumeMedia =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
   async (
@@ -556,6 +574,7 @@ const handleConsumeMedia =
     }
   }
 
+// TODO: TYPES unpause-consumer
 const handleUnpauseConsumer =
   (socket: Socket, clientService: ClientService) =>
   async (
@@ -599,6 +618,7 @@ const handleUnpauseConsumer =
     }
   }
 
+// TODO: TYPES chat-message
 const handleChatMessage =
   (socket: Socket, clientService: ClientService, roomService: RoomService) =>
   (data: SendChatMessageData): void => {
@@ -634,6 +654,7 @@ const handleChatMessage =
       }
 
       // Broadcast to all clients in the room (including sender)
+      // TODO: TYPES chat-message
       socket.to(room.name).emit('chat-message', chatMessage)
       socket.emit('chat-message', chatMessage) // Echo back to sender for consistency
 

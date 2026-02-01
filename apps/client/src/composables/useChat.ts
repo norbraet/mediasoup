@@ -1,6 +1,7 @@
 // useChat.ts
 import { onUnmounted, ref } from 'vue'
-import type { ChatMessage, SendChatMessageData, ChatSocketApi, UseChat } from '../types/types'
+import type { ChatSocketApi, UseChat } from '../types/types'
+import type { ChatMessage, SendChatMessageData } from '@mediasoup/types'
 
 export function useChat(chatApi: ChatSocketApi): UseChat {
   const messages = ref<ChatMessage[]>([])

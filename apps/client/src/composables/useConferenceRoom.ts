@@ -17,6 +17,8 @@ import type {
 import { useChat } from './useChat'
 import { createChatSocketApi } from '../services/chatSocketApi'
 import { shallowRef, ref } from 'vue'
+import type { JoinRoomResponse } from '@mediasoup/types'
+import type { RtpCapabilities } from 'mediasoup-client/types'
 
 export function useConferenceRoom() {
   const socket = useSocket()
@@ -62,7 +64,10 @@ export function useConferenceRoom() {
 
       // Join the room and get router capabilities
       console.debug('Joining room...')
-      const joinResp = await socket.getSocket().emitWithAck('join-room', { userName, roomName })
+      // TODO: TYPES join-room
+      const joinResp: JoinRoomResponse = await socket
+        .getSocket()
+        .emitWithAck('join-room', { userName, roomName })
       console.debug('join-room - resp :>> ', joinResp)
 
       if (!joinResp.success) {
@@ -77,7 +82,7 @@ export function useConferenceRoom() {
 
       // Create and load device
       const device = new Device()
-      await device.load({ routerRtpCapabilities: joinResp.routerCapabilities })
+      await device.load({ routerRtpCapabilities: joinResp.routerCapabilities as RtpCapabilities })
 
       // Create producer and consumer
       producer = useProducer(producerSignalingApi, producerEventApi, mediaState)
@@ -112,6 +117,7 @@ export function useConferenceRoom() {
 
   const leaveRoom = () => {
     if (socket.getSocket() && room.currentRoom.value) {
+      // TODO: TYPES leave-room
       socket.getSocket().emit('leave-room')
 
       // Remove socket listeners
@@ -202,6 +208,7 @@ export function useConferenceRoom() {
 
       // Join room as screen share client
       const screenShareUserName = `${currentUserName} - Screen Share`
+      // TODO: TYPES join-room
       const joinResp = await screenShareSocket.getSocket().emitWithAck('join-room', {
         userName: screenShareUserName,
         roomName: currentRoomName,
@@ -276,6 +283,7 @@ export function useConferenceRoom() {
   const stopScreenShare = async () => {
     try {
       if (screenShareSocket.isConnected.value) {
+        // TODO: TYPES leave-room
         screenShareSocket.getSocket().emit('leave-room')
       }
 

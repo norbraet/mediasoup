@@ -1,6 +1,7 @@
 import type { types } from 'mediasoup-client'
-import type { RoomParticipant, SpeakerData, ConsumerSignalingApi } from '../../types/types'
+import type { RoomParticipant, ConsumerSignalingApi } from '../../types/types'
 import { ref, type Ref } from 'vue'
+import type { RecentSpeakerData } from '@mediasoup/types'
 
 export function useConsumer(
   consumerApi: ConsumerSignalingApi,
@@ -9,7 +10,7 @@ export function useConsumer(
   const consumerTransports = ref<Map<string, types.Transport>>(new Map())
 
   // Called by the composable when joining or when new producers appear
-  const requestConsumerTransports = async (speakers: SpeakerData[], device: types.Device) => {
+  const requestConsumerTransports = async (speakers: RecentSpeakerData[], device: types.Device) => {
     for (const speaker of speakers) {
       try {
         // Skip participants without any producers
@@ -27,7 +28,7 @@ export function useConsumer(
           continue
         }
 
-        // 1️⃣ Request consumer transport from server
+        // Request consumer transport from server
         // For screen share clients, use videoProducerId as the primary key
         const primaryProducerId = speaker.audioProducerId || speaker.videoProducerId!
         const transportResp = await consumerApi.requestConsumerTransport(primaryProducerId)
@@ -84,11 +85,12 @@ export function useConsumer(
 
   // Listeners for dynamic events
   const setupDynamicConsumerListeners = (device: types.Device) => {
+    // TODO: TYPES new-producer-to-consume
     consumerApi.on(
       'new-producer-to-consume',
       async (data: {
         routerRtpCapabilities: types.RtpCapabilities
-        recentSpeakersData: SpeakerData[]
+        recentSpeakersData: RecentSpeakerData[]
         activeSpeakerList: string[]
       }) => {
         console.log('New producers to consume:', data.recentSpeakersData)
@@ -104,6 +106,7 @@ export function useConsumer(
       }
     )
 
+    // TODO: TYPES update-active-speakers
     consumerApi.on('update-active-speakers', (activeSpeakerIds: string[]) => {
       console.log('Active speakers updated:', activeSpeakerIds)
       for (const [userId, participant] of participants.value.entries()) {
@@ -111,6 +114,7 @@ export function useConsumer(
       }
     })
 
+    // TODO: TYPES user-joined
     consumerApi.on('user-joined', (data: { userId: string; userName: string }) => {
       console.log('New user joined:', data.userName, data.userId)
       if (!participants.value.has(data.userId)) {
@@ -127,6 +131,7 @@ export function useConsumer(
       }
     })
 
+    // TODO: TYPES user-left
     consumerApi.on('user-left', (data: { userId: string; userName: string }) => {
       console.log('User left:', data.userName, data.userId)
       // Clean up transport for this user
@@ -138,6 +143,7 @@ export function useConsumer(
       participants.value.delete(data.userId)
     })
 
+    // TODO: TYPES participant-video-changed
     consumerApi.on(
       'participant-video-changed',
       (data: { userId: string; userName: string; isVideoEnabled: boolean }) => {
@@ -149,6 +155,7 @@ export function useConsumer(
       }
     )
 
+    // TODO: TYPES participant-audio-changed
     consumerApi.on(
       'participant-audio-changed',
       (data: { userId: string; userName: string; isAudioMuted: boolean }) => {

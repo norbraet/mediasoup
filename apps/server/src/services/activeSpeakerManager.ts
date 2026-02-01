@@ -1,5 +1,6 @@
 import { Socket } from 'socket.io'
-import type { Room, ClientService, RecentSpeakerData, ActiveSpeakerManager } from '../types'
+import type { Room, ClientService, ActiveSpeakerManager } from '../types'
+import type { RecentSpeakerData } from '@mediasoup/types'
 import { updateActiveSpeakers } from './activeSpeakerService'
 import env from '../config/env'
 
@@ -7,7 +8,7 @@ export function createActiveSpeakerManager(
   clientService: ClientService,
   socket: Socket
 ): ActiveSpeakerManager {
-  // 🔥 Setup event handling for a specific room
+  // Setup event handling for a specific room
   function setupActiveSpeakerHandling(room: Room): void {
     room.activeSpeakerObserver.on('dominantspeaker', async (dominantSpeaker) => {
       // Find the client who owns this producer
@@ -47,6 +48,7 @@ export function createActiveSpeakerManager(
               })
             }
 
+            // TODO: TYPES new-producer-to-consume
             socket.to(socketId).emit('new-producer-to-consume', {
               routerRtpCapabilities: room.router.rtpCapabilities,
               recentSpeakersData: speakerData,

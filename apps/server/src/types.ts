@@ -1,6 +1,17 @@
 import { types } from 'mediasoup'
 import { WebRtcTransport } from 'mediasoup/types'
 import { Socket } from 'socket.io'
+import type {
+  ConnectTransportResponse,
+  ConsumeMediaResponse,
+  JoinRoomResponse,
+  RecentSpeakerData,
+  RequestTransportResponse,
+  ResumeConsumerResponse,
+  RoleType,
+  SendChatMessageData,
+  StartProducingResponse,
+} from '@mediasoup/types'
 
 export type ClientProducingParams = Pick<
   types.ProducerOptions,
@@ -103,49 +114,13 @@ export interface RoomService {
   getRoomStats: () => Array<{ roomName: string; clientCount: number; workerPid: string }>
 }
 
-// TODO: Needs to be a sharable type so the frontend knows how the response is looking
-export interface RecentSpeakerData {
-  audioProducerId: string | null
-  videoProducerId: string | null
-  userName: string
-  userId: string
-}
-
-export type JoinRoomAck = (response: {
-  success: boolean
-  routerCapabilities?: unknown
-  error?: string
-  recentSpeakersData?: Array<RecentSpeakerData | null>
-}) => void
-
-export type RequestTransportAck = (response: {
-  success: boolean
-  params?: ClientTransportParams
-  error?: string
-}) => void
-
-export type ConnectTransportAck = (response: { success: boolean; error?: string }) => void
-
-export type StartProducingAck = (response: {
-  success: boolean
-  id?: string
-  error?: string
-}) => void
-
-export type StartConsumingAck = (response: {
-  success: boolean
-  id?: string
-  rtpParameters?: types.RtpParameters
-  error?: string
-}) => void
-
-export type ResumeConsumerAck = (response: { success: boolean; error?: string }) => void
-
-export type ConsumeMediaAck = (response: {
-  success: boolean
-  error?: string
-  params?: ClientConsumeMediaParams
-}) => void
+export type JoinRoomAck = (response: JoinRoomResponse) => void
+export type RequestTransportAck = (response: RequestTransportResponse) => void
+export type ConnectTransportAck = (response: ConnectTransportResponse) => void
+export type StartProducingAck = (response: StartProducingResponse) => void
+export type StartConsumingAck = (response: StartProducingResponse) => void // TODO: Kann raus?
+export type ResumeConsumerAck = (response: ResumeConsumerResponse) => void
+export type ConsumeMediaAck = (response: ConsumeMediaResponse) => void
 export interface RoomHandlers {
   'join-room': (data: { userName: string; roomName: string }, ack: JoinRoomAck) => Promise<void>
   'request-transport': (
@@ -185,9 +160,6 @@ export interface WorkerPoolService {
   getWorkerStats(): Array<{ workerId: string; roomCount: number }>
 }
 
-// TODO: This type should be a sharable type since the frontend relys on it
-export type RoleType = 'producer' | 'consumer'
-
 export type NewProducersToConsumeData = {
   routerRtpCapabilities: types.RtpCapabilities
   recentSpeakersData: RecentSpeakerData[]
@@ -201,18 +173,4 @@ export interface ActiveSpeakerManager {
 export type ClientRoomContext = {
   client: Client
   room: Room
-}
-
-// Chat types
-export type ChatMessage = {
-  userId: string
-  userName: string
-  message: string
-  timestamp: number
-}
-
-export type SendChatMessageData = {
-  roomId: string
-  message: string
-  timestamp: number
 }

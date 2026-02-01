@@ -3,6 +3,7 @@ import { types } from 'mediasoup'
 import type { MediasoupService } from '../../types'
 import { createClientSession, type ClientSession } from '../../mediasoup/clientSession'
 import type { ClientProducingParams, ClientTransportParams } from '../../types.ts'
+import { RoleType } from '@mediasoup/types'
 
 interface WebRTCHandlers {
   getRtpCap: ReturnType<typeof handleGetRtpCapabilities>
@@ -69,8 +70,9 @@ const handleCreateConsumerTransport =
     }
   }
 
+// TODO: TYPES connect-transport
 const handleConnectTransport =
-  (session: ClientSession, type: 'producer' | 'consumer') =>
+  (session: ClientSession, type: RoleType) =>
   async (
     data: { dtlsParameters: types.DtlsParameters },
     acknowledgement: (message: string) => void
@@ -91,6 +93,7 @@ const handleConnectTransport =
     }
   }
 
+// TODO: TYPES connect-transport
 const handleStartProducing =
   (mediasoupService: MediasoupService, session: ClientSession) =>
   async (
@@ -112,6 +115,7 @@ const handleStartProducing =
     }
   }
 
+// TODO: TYPES consume-media
 const handleConsumeMedia =
   (mediasoupService: MediasoupService, session: ClientSession) =>
   async (
@@ -161,6 +165,7 @@ const handleConsumeMedia =
     }
   }
 
+// TODO: TYPES unpause-consumer
 const handleUnpauseConsumer =
   (session: ClientSession) =>
   async (_acknowledgement: Function): Promise<void> => {

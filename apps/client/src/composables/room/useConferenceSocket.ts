@@ -7,6 +7,7 @@ export function useConferenceSocket(socket: Socket) {
   const roomParticipants = ref<Map<string, RoomParticipant>>(new Map())
 
   const joinRoom = async (userName: string, roomName: string) => {
+    // TODO: TYPES join-room
     const resp = await socket.emitWithAck('join-room', { userName, roomName })
     if (!resp.success) {
       throw new Error(resp.error || 'Failed to join room')
@@ -24,6 +25,7 @@ export function useConferenceSocket(socket: Socket) {
   }
 
   const leaveRoom = () => {
+    // TODO: TYPES leave-room
     socket.emit('leave-room')
 
     // Cleanup

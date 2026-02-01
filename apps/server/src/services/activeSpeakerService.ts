@@ -99,6 +99,7 @@ export const updateActiveSpeakers = async (
   }
 
   // Broadcast updated active speakers to all clients in room
+  // TODO: TYPES update-active-speakers
   socket.to(room.name).emit('update-active-speakers', activeSpeakers)
 
   return newTransportsByPeer

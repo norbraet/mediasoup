@@ -1,6 +1,7 @@
 import type { DeepReadonly, Ref } from 'vue'
 import { types } from 'mediasoup-client'
 import { useSocket } from './../composables/useSocket'
+import type { ChatMessage, SendChatMessageData } from '@mediasoup/types'
 export type RoomParticipant = {
   userId: string
   userName: string
@@ -12,13 +13,6 @@ export type RoomParticipant = {
   isActiveSpeaker?: boolean
   isVideoEnabled?: boolean
   isAudioMuted?: boolean
-}
-
-export type SpeakerData = {
-  audioProducerId: string
-  videoProducerId: string | null
-  userName: string
-  userId: string
 }
 
 export interface CurrentProducer {
@@ -102,19 +96,6 @@ export interface ConsumerSignalingApi {
 }
 
 // Chat types
-export type ChatMessage = {
-  userId: string
-  userName: string
-  message: string
-  timestamp: number
-}
-
-export type SendChatMessageData = {
-  roomId: string
-  message: string
-  timestamp: number
-}
-
 export interface ChatSocketApi {
   sendChatMessage(data: SendChatMessageData): void
   onChatMessage(callback: (message: ChatMessage) => void): void
